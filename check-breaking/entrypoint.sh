@@ -3,7 +3,7 @@ set -e
 
 readonly base="$1"
 readonly revision="$2"
-readonly fail_on_diff="$6"
+readonly fail_on_diff="$3"
 
 echo "running oasdiff check for breaking-changes... base: $base, revision: $revision, fail_on_diff: $fail_on_diff"
 

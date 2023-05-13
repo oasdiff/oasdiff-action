@@ -1,18 +1,19 @@
 name: 'Test OpenAPI Spec Diff Action'
 on: push
 jobs:
-  # oas_diff_job:
-  #   runs-on: ubuntu-latest
-  #   name: A job to test OpenAPI Spec diff action
-  #   steps:
-  #       - name: checkout
-  #         uses: actions/checkout@v3
-  #       - name: Running OpenAPI Spec diff action
-  #         id: test_ete
-  #         uses: ./
-  #         with:
-  #           base: 'specs/base.yaml'
-  #           revision: 'specs/revision.yaml'
+  oas_diff_job:
+    runs-on: ubuntu-latest
+    name: A job to test OpenAPI Spec diff action
+    steps:
+        - name: checkout
+          uses: actions/checkout@v3
+        - name: Running OpenAPI Spec diff action
+          id: test_ete
+          uses: ./diff
+          with:
+            base: 'specs/base.yaml'
+            revision: 'specs/revision.yaml'
+            format: 'text'
   oas_diff_breaking_changes_job:
     runs-on: ubuntu-latest
     name: A job to test OpenAPI Spec breaking changes
