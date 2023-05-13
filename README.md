@@ -1,1 +1,32 @@
 # oasdiff-action
+[![CI](https://github.com/oasdiff/oasdiff-action/actions/workflows/test.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions)
+
+GitHub actions for comparing OpenAPI specs and detect breaking changes, based on [oasdiff](https://github.com/Tufin/oasdiff) tool
+
+## How to use?
+Depend on your use case:
+
+### Find diff
+Copy and paste the following snippet into your build .yml file:
+```
+- name: Running OpenAPI Spec diff action
+  id: test_ete
+  uses: ./diff
+  with:
+    base: 'specs/base.yaml'
+    revision: 'specs/revision.yaml'
+    format: 'text'
+    fail-on-diff: false
+```
+
+### Check for breaking API changes, and fail if any are found
+Copy and paste the following snippet into your build .yml file:
+```
+- name: Running OpenAPI Spec diff action
+  id: test_ete
+  uses: ./check-breaking
+  with:
+    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+    fail-on-diff: true
+```
