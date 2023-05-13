@@ -11,6 +11,5 @@ if [ "$fail_on_diff" = "true"  ]
 then
   oasdiff -check-breaking -fail-on-diff -base "$base" -revision "$revision"
 else
-then
   oasdiff -check-breaking -base "$base" -revision "$revision"
 fi
