@@ -28,7 +28,7 @@ jobs:
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
   oas_diff_breaking_changes_latest_job:
     runs-on: ubuntu-latest
-    name: A job to test OpenAPI Spec breaking changes
+    name: A job to test latest release of OpenAPI Spec breaking changes action
     steps:
       - name: checkout
         uses: actions/checkout@v3
