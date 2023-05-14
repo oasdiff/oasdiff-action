@@ -11,7 +11,7 @@ Copy and paste the following snippet into your build .yml file:
 ```
 - name: Running OpenAPI Spec diff action
   id: test_ete
-  uses: oasdiff/oasdiff-action/diff@latest
+  uses: oasdiff/oasdiff-action/diff@main
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -24,7 +24,7 @@ Copy and paste the following snippet into your build .yml file:
 ```
 - name: Running OpenAPI Spec diff action
   id: test_ete
-  uses: oasdiff/oasdiff-action/check-breaking@latest
+  uses: oasdiff/oasdiff-action/check-breaking@main
   with:
     base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
     revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
