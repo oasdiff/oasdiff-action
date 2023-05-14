@@ -38,3 +38,12 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+  hello_job:
+    runs-on: ubuntu-latest
+    name: A placeholder job
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Running hello
+        id: test_hello
+        uses: oasdiff/oasdiff-action@latest
