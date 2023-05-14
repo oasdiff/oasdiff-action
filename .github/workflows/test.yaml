@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Running OpenAPI Spec check breaking latest action
         id: test_breaking_changes
-        uses: oasdiff/oasdiff-action/check-breaking@latest
+        uses: oasdiff/oasdiff-action/check-breaking@main
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
