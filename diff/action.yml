@@ -1,4 +1,4 @@
-name: 'OpenAPI Spec Diff'
+name: 'OpenAPI Spec diff tool'
 description: 'A diff tool for OpenAPI Specification 3'
 inputs:
   base:
