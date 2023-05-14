@@ -26,3 +26,15 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+  oas_diff_breaking_changes_tag_job:
+    runs-on: ubuntu-latest
+    name: A job to test tag release of OpenAPI Spec breaking changes action
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Running OpenAPI Spec check breaking tag action
+        id: test_breaking_changes
+        uses: oasdiff/oasdiff-action/check-breaking@v0.0.6
+        with:
+          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
