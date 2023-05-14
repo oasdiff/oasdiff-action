@@ -1,4 +1,4 @@
-name: 'OpenAPI Spec Diff'
+name: 'OpenAPI Spec: check for breaking API changes'
 description: 'Detect breaking changes in OpenAPI Specification 3'
 inputs:
   base:
