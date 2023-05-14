@@ -1,2 +1,5 @@
-name: 'Abstract'
+name: 'Hello'
 description: 'A place holder for inner actions'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
