@@ -10,7 +10,7 @@ inputs:
   fail-on-diff:
     description: 'Fail with exit code 1 if a difference is found'
     required: false
-    default: false
+    default: true
 runs:
   using: 'docker'
   image: 'Dockerfile'
