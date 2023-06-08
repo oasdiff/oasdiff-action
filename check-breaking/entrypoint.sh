@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 readonly base="$1"
 readonly revision="$2"
