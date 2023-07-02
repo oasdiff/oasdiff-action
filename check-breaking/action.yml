@@ -14,7 +14,7 @@ inputs:
   fail-on-warns:
     description: "Fail with exit code 1 if any WARN-level breaking changes are found"
     required: false
-    default: false
+    default: 'false'
 runs:
   using: "docker"
   image: "Dockerfile"

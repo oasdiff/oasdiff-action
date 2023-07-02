@@ -10,7 +10,7 @@ echo "running oasdiff... base: $base, revision: $revision, format: $format, fail
 
 if [ "$fail_on_diff" = "true"  ]
 then
-  oasdiff -fail-on-diff -format "$format" -base "$base" -revision "$revision"
+  oasdiff diff "$base" "$revision" --fail-on-diff --format "$format" 
 else
-  oasdiff -format "$format" -base "$base" -revision "$revision"
+  oasdiff diff "$base" "$revision" --format "$format" 
 fi
