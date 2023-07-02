@@ -30,3 +30,14 @@ Copy and paste the following snippet into your build .yml file:
     revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
     fail-on-diff: true
 ```
+
+### Generate a changelog
+Copy and paste the following snippet into your build .yml file:
+```
+- name: Running OpenAPI Spec diff action
+  id: test_ete
+  uses: oasdiff/oasdiff-action/changelog@main
+  with:
+    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+```

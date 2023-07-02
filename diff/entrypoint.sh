@@ -6,7 +6,7 @@ readonly revision="$2"
 readonly format="$3"
 readonly fail_on_diff="$4"
 
-echo "running oasdiff... base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff"
+echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff"
 
 set -o pipefail
 
