@@ -1,5 +1,5 @@
-name: 'OpenAPI Spec: check for breaking API changes'
-description: 'Detect breaking changes in OpenAPI Specification 3'
+name: 'OpenAPI Spec: changelog'
+description: 'Generate a changelog for OpenAPI Specification 3'
 inputs:
   base:
     description: 'Path of original OpenAPI spec in YAML or JSON format'
@@ -7,14 +7,9 @@ inputs:
   revision:
     description: 'Path of revised OpenAPI spec in YAML or JSON format'
     required: true
-  fail-on-diff:
-    description: 'Fail with exit code 1 if any breaking changes are found'
-    required: false
-    default: 'true'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
-    - ${{ inputs.fail-on-diff }}

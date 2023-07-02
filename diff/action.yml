@@ -1,5 +1,5 @@
 name: 'OpenAPI Spec: diff'
-description: 'A diff tool for OpenAPI Specification 3'
+description: 'Generate a diff report for OpenAPI Specification 3'
 inputs:
   base:
     description: 'Path of original OpenAPI spec in YAML or JSON format'
