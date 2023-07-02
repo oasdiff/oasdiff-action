@@ -10,7 +10,7 @@ echo "running oasdiff... base: $base, revision: $revision, format: $format, fail
 
 set -o pipefail
 
-if [[ $fail_on_diff" == "true" ]]; then
+if [[ $fail_on_diff == "true" ]]; then
   oasdiff diff "$base" "$revision" --fail-on-diff --format "$format" 
 else
   oasdiff diff "$base" "$revision" --format "$format"
