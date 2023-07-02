@@ -8,13 +8,9 @@ inputs:
     description: "Path of revised OpenAPI spec in YAML or JSON format"
     required: true
   fail-on-diff:
-    description: "Fail with exit code 1 if any ERR-level breaking changes are found"
+    description: "Fail with exit code 1 if any breaking changes are found"
     required: false
-    default: true
-  fail-on-warns:
-    description: "Fail with exit code 1 if any WARN-level breaking changes are found"
-    required: false
-    default: false
+    default: 'true'
 runs:
   using: "docker"
   image: "Dockerfile"
@@ -22,4 +18,3 @@ runs:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
     - ${{ inputs.fail-on-diff }}
-    - ${{ inputs.fail-on-warns }}
