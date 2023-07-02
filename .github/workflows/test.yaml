@@ -27,7 +27,7 @@ jobs:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
           fail-on-diff: false
-  oas_diff_changlog_tag_job:
+  oas_diff_changelog_tag_job:
     runs-on: ubuntu-latest
     name: A job to test tag release of OpenAPI Spec changelog action
     steps:
@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Running OpenAPI Spec changelog tag action
         id: test_changelog
-        uses: oasdiff/oasdiff-action/changlog@v0.0.10
+        uses: oasdiff/oasdiff-action/changelog@v0.0.10
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
