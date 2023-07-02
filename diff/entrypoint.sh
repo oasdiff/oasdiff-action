@@ -8,9 +8,10 @@ readonly fail_on_diff="$4"
 
 echo "running oasdiff... base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff"
 
-if [ "$fail_on_diff" = "true"  ]
-then
+set -o pipefail
+
+if [[ $fail_on_diff" == "true" ]]; then
   oasdiff diff "$base" "$revision" --fail-on-diff --format "$format" 
 else
-  oasdiff diff "$base" "$revision" --format "$format" 
+  oasdiff diff "$base" "$revision" --format "$format"
 fi
