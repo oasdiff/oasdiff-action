@@ -13,7 +13,7 @@ if [[ $fail_on_diff = "true" ]]; then
     flags+="--fail-on WARN " 
 fi 
 if [[ -n $include_checks ]]; then 
-    flags+="--include-checks $include_checks " 
+    flags+="--include-checks a " 
 fi 
 echo "flags: $flags"
 
