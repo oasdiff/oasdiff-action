@@ -14,7 +14,6 @@ inputs:
   include-checks:
     description: 'Include any of the defined optional breaking changes checks'
     required: false
-    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
