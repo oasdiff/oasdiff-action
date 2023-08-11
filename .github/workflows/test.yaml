@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Running OpenAPI Spec check breaking action
         id: test_breaking_changes
-        uses: ./check-breaking
+        uses: ./breaking
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
