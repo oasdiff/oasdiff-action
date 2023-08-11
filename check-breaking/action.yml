@@ -11,6 +11,10 @@ inputs:
     description: 'Fail with exit code 1 if any breaking changes are found'
     required: false
     default: 'true'
+  include-checks:
+    description: 'Include any of the defined optional breaking changes checks'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -18,3 +22,4 @@ runs:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
     - ${{ inputs.fail-on-diff }}
+    - ${{ inputs.include-checks }}
