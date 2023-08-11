@@ -20,7 +20,6 @@ if [[ -n $include_checks ]]; then
 fi
 echo "flags: $flags"
 
-# Run command
 if [[ -n $flags ]]; then
   oasdiff breaking "$base" "$revision" $flags
 else
