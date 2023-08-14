@@ -9,15 +9,15 @@ echo "running oasdiff breaking base: $base, revision: $revision, fail_on_diff: $
 
 # Build flags to pass in command
 flags=""
-if [[ $fail_on_diff = "true" ]]; then
-    flags+="--fail-on WARN "
+if [ "$fail_on_diff" = "true" ]; then
+    flags="${flags} --fail-on WARN"
 fi
-if [[ ! -z $include_checks ]]; then
-    flags+="--include-checks $include_checks "
+if [ -n "$include_checks" ]; then
+    flags="${flags} --include-checks $include_checks"
 fi
 echo "flags: $flags"
 
-if [[ -n $flags ]]; then
+if [ -n "$flags" ]; then
     oasdiff breaking "$base" "$revision" $flags
 else
     oasdiff breaking "$base" "$revision"
