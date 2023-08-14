@@ -24,7 +24,7 @@ Copy and paste the following snippet into your build .yml file:
 ```
 - name: Running OpenAPI Spec diff action
   id: test_ete
-  uses: oasdiff/oasdiff-action/check-breaking@main
+  uses: oasdiff/oasdiff-action/breaking@main
   with:
     base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
     revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
@@ -39,7 +39,7 @@ These checks can be added by filling the `include-checks` argument in the action
 ```
 - name: Running OpenAPI Spec diff action
   id: test_ete
-  uses: oasdiff/oasdiff-action/check-breaking@main
+  uses: oasdiff/oasdiff-action/breaking@main
   with:
     base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
     revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
