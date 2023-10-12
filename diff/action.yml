@@ -15,6 +15,10 @@ inputs:
     description: 'Fail with exit code 1 if a difference is found'
     required: false
     default: 'false'
+  include-path-params:
+    description: 'Include path parameter names in endpoint matching'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -23,3 +27,4 @@ runs:
     - ${{ inputs.revision }}
     - ${{ inputs.format }}
     - ${{ inputs.fail-on-diff }}
+    - ${{ inputs.include-path-params }}

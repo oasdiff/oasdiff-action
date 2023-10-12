@@ -14,6 +14,10 @@ inputs:
   include-checks:
     description: 'Include any of the defined optional breaking changes checks'
     required: false
+  include-path-params:
+    description: 'Include path parameter names in endpoint matching'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -22,3 +26,4 @@ runs:
     - ${{ inputs.revision }}
     - ${{ inputs.fail-on-diff }}
     - ${{ inputs.include-checks }}
+    - ${{ inputs.include-path-params }}
