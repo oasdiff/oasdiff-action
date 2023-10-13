@@ -47,24 +47,6 @@ These checks can be added by filling the `include-checks` argument in the action
     include-checks: "response-non-success-status-removed,api-operation-id-removed"
 ```
 
-#### Include path parameter names in endpoint matching
-oasdiff compares matching endpoints to each other.  
-By default, the matching algorithm **ignores** path parameter names.  
-For example, the following endpoints will be compared to each other because they differ only by a path parameter name:
-- GET /pet/{id}
-- GET /pet/{petId}
-
-This capability allows oasdiff to compare matching endpoints even if their path parameters were renamed.
-```
-- name: Running OpenAPI Spec diff action
-  id: test_ete
-  uses: oasdiff/oasdiff-action/breaking@main
-  with:
-    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
-    include-path-params: true
-```
-
 ### Generate a changelog
 Copy and paste the following snippet into your build .yml file:
 ```
@@ -74,4 +56,20 @@ Copy and paste the following snippet into your build .yml file:
   with:
     base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
     revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+```
+
+### Path parameter renaming
+By default, oasdiff supports path parameter renaming.  
+In certain cases, you may want to change this behavior.  
+This option tells oasdiff to include path parameter names in the endpoint matching algorithm.  
+[See detailed explanation](https://github.com/Tufin/oasdiff/blob/main/MATCHING-ENDPOINTS.md).
+
+```
+- name: Running OpenAPI Spec diff action
+  id: test_ete
+  uses: oasdiff/oasdiff-action/breaking@main
+  with:
+    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+    include-path-params: true
 ```
