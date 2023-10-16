@@ -11,6 +11,9 @@ echo "running oasdiff diff base: $base, revision: $revision, format: $format, fa
 
 # Build flags to pass in command
 flags=""
+if [ "$format" != "yaml" ]; then
+    flags="${flags} --format ${format}"
+fi
 if [ "$fail_on_diff" = "true" ]; then
     flags="${flags} --fail-on-diff"
 fi
@@ -22,7 +25,7 @@ echo "flags: $flags"
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    oasdiff diff "$base" "$revision" --format "$format" $flags
+    oasdiff diff "$base" "$revision" $flags
 else
-    oasdiff diff "$base" "$revision" --format "$format"
+    oasdiff diff "$base" "$revision"
 fi
