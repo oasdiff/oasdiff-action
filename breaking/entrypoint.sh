@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-readonly base="$1" 
-readonly revision="$2" 
-readonly fail_on_diff="$3" 
+readonly base="$1"
+readonly revision="$2"
+readonly fail_on_diff="$3"
 readonly include_checks="$4"
 readonly include_path_params="$5"
 
@@ -23,7 +23,27 @@ fi
 echo "flags: $flags"
 
 if [ -n "$flags" ]; then
-    oasdiff breaking "$base" "$revision" $flags
+    OUTPUT=$(oasdiff breaking "$base" "$revision" $flags)
 else
-    oasdiff breaking "$base" "$revision"
+    OUTPUT=$(oasdiff breaking "$base" "$revision")
 fi
+
+echo "$OUTPUT"
+
+# GitHub Actions limits output to 1MB
+# We count bytes because unicode has multibyte characters
+SIZE=$(echo "$OUTPUT" | wc -c)
+if [ "$SIZE" -ge "1000000" ]; then
+    echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
+    OUTPUT=$(echo "$OUTPUT" | head -c $LIMIT)
+fi
+
+DELIMITER=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+
+echo "breaking<<$DELIMITER" >>$GITHUB_OUTPUT
+echo "$OUTPUT" >>$GITHUB_OUTPUT
+echo "$DELIMITER" >>$GITHUB_OUTPUT
+
+echo '```' >>$GITHUB_STEP_SUMMARY
+echo "$OUTPUT" >>$GITHUB_STEP_SUMMARY
+echo '```' >>$GITHUB_STEP_SUMMARY

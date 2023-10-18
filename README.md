@@ -24,6 +24,8 @@ This action supports additional arguments that are converted to parameters for t
 | --format | format | yaml |
 | --include-path-params | include-path-params | false |
 
+Available outputs: `diff`
+
 ### Check for breaking API changes, and fail if any are found
 Copy and paste the following snippet into your build .yml file:
 ```
@@ -42,6 +44,7 @@ Additional arguments:
 | --include-checks      | include-checks | csv |
 | --include-path-params | include-path-params | false |
 
+Available outputs: `breaking`
 
 ### Generate a changelog
 Copy and paste the following snippet into your build .yml file:
@@ -58,3 +61,5 @@ Additional arguments:
 | CLI | Action input | Default |
 |--------|--------|--------|
 | --include-path-params | include-path-params | false |
+
+Available outputs: `changelog`

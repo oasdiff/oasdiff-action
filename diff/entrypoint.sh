@@ -25,7 +25,27 @@ echo "flags: $flags"
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    oasdiff diff "$base" "$revision" $flags
+    OUTPUT=$(oasdiff diff "$base" "$revision" $flags)
 else
-    oasdiff diff "$base" "$revision"
+    OUTPUT=$(oasdiff diff "$base" "$revision")
+fi
+
+echo "$OUTPUT"
+
+# GitHub Actions limits output to 1MB
+# We count bytes because unicode has multibyte characters
+SIZE=$(echo "$OUTPUT" | wc -c)
+if [ "$SIZE" -ge "1000000" ]; then
+    echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
+    OUTPUT=$(echo "$OUTPUT" | head -c $LIMIT)
+fi
+
+DELIMITER=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+
+echo "diff<<$DELIMITER" >>$GITHUB_OUTPUT
+echo "$OUTPUT" >>$GITHUB_OUTPUT
+echo "$DELIMITER" >>$GITHUB_OUTPUT
+
+if [ "$format" = "text" ]; then
+    echo "$OUTPUT" >>$GITHUB_STEP_SUMMARY
 fi
