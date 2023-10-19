@@ -23,9 +23,9 @@ fi
 echo "flags: $flags"
 
 if [ -n "$flags" ]; then
-    OUTPUT=$(oasdiff breaking "$base" "$revision" $flags)
+    OUTPUT=$(unbuffer oasdiff breaking "$base" "$revision" $flags)
 else
-    OUTPUT=$(oasdiff breaking "$base" "$revision")
+    OUTPUT=$(unbuffer oasdiff breaking "$base" "$revision")
 fi
 
 echo "$OUTPUT"
@@ -39,6 +39,9 @@ if [ "$SIZE" -ge "1000000" ]; then
 fi
 
 DELIMITER=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+
+# Remove ANSI color codes
+OUTPUT=$(echo "$OUTPUT" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g")
 
 echo "breaking<<$DELIMITER" >>$GITHUB_OUTPUT
 echo "$OUTPUT" >>$GITHUB_OUTPUT
