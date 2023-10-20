@@ -23,30 +23,32 @@ fi
 echo "flags: $flags"
 
 if [ -n "$flags" ]; then
-    OUTPUT=$(unbuffer oasdiff breaking "$base" "$revision" $flags)
+    output=$(unbuffer oasdiff breaking "$base" "$revision" $flags)
 else
-    OUTPUT=$(unbuffer oasdiff breaking "$base" "$revision")
+    output=$(unbuffer oasdiff breaking "$base" "$revision")
 fi
 
-echo "$OUTPUT"
+echo "$output"
 
 # GitHub Actions limits output to 1MB
 # We count bytes because unicode has multibyte characters
-SIZE=$(echo "$OUTPUT" | wc -c)
-if [ "$SIZE" -ge "1000000" ]; then
+size=$(echo "$output" | wc -c)
+if [ "$size" -ge "1000000" ]; then
     echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
-    OUTPUT=$(echo "$OUTPUT" | head -c $LIMIT)
+    output=$(echo "$output" | head -c $1000000)
 fi
 
-DELIMITER=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 
 # Remove ANSI color codes
-OUTPUT=$(echo "$OUTPUT" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g")
+output=$(echo "$output" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g")
 
-echo "breaking<<$DELIMITER" >>$GITHUB_OUTPUT
-echo "$OUTPUT" >>$GITHUB_OUTPUT
-echo "$DELIMITER" >>$GITHUB_OUTPUT
+echo "breaking<<$delimiter" >>$GITHUB_OUTPUT
+[ -n "$output" ] && echo "$output" >>$GITHUB_OUTPUT
+[ -z "$output" ] && echo "No breaking changes" >>$GITHUB_OUTPUT
+echo "$delimiter" >>$GITHUB_OUTPUT
 
 echo '```' >>$GITHUB_STEP_SUMMARY
-echo "$OUTPUT" >>$GITHUB_STEP_SUMMARY
+[ -n "$output" ] && echo "$output" >>$GITHUB_STEP_SUMMARY
+[ -z "$output" ] && echo "No breaking changes" >>$GITHUB_STEP_SUMMARY
 echo '```' >>$GITHUB_STEP_SUMMARY

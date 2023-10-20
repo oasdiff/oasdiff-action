@@ -25,27 +25,27 @@ echo "flags: $flags"
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    OUTPUT=$(oasdiff diff "$base" "$revision" $flags)
+    output=$(oasdiff diff "$base" "$revision" $flags)
 else
-    OUTPUT=$(oasdiff diff "$base" "$revision")
+    output=$(oasdiff diff "$base" "$revision")
 fi
 
-echo "$OUTPUT"
+echo "$output"
 
 # GitHub Actions limits output to 1MB
 # We count bytes because unicode has multibyte characters
-SIZE=$(echo "$OUTPUT" | wc -c)
-if [ "$SIZE" -ge "1000000" ]; then
+size=$(echo "$output" | wc -c)
+if [ "$size" -ge "1000000" ]; then
     echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
-    OUTPUT=$(echo "$OUTPUT" | head -c $LIMIT)
+    output=$(echo "$output" | head -c $1000000)
 fi
 
-DELIMITER=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 
-echo "diff<<$DELIMITER" >>$GITHUB_OUTPUT
-echo "$OUTPUT" >>$GITHUB_OUTPUT
-echo "$DELIMITER" >>$GITHUB_OUTPUT
+echo "diff<<$delimiter" >>$GITHUB_OUTPUT
+[ -n "$output" ] && echo "$output" >>$GITHUB_OUTPUT
+echo "$delimiter" >>$GITHUB_OUTPUT
 
-if [ "$format" = "text" ]; then
-    echo "$OUTPUT" >>$GITHUB_STEP_SUMMARY
+if [ "$format" = "text" && -n "$output" ]; then
+    echo "$output" >>$GITHUB_STEP_SUMMARY
 fi
