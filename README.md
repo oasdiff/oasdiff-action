@@ -11,9 +11,12 @@ Copy and paste the following snippet into your build .yml file:
 ```
 - name: Running OpenAPI Spec diff action
   uses: oasdiff/oasdiff-action/diff@main
+  id: oasdiff
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
+
+# Followup steps can use the output and share on Slack, S3, etc: ${{ steps.oasdiff.outputs.diff }}
 ```
 
 This action supports additional arguments that are converted to parameters for the `oasdiff` CLI.
@@ -24,7 +27,7 @@ This action supports additional arguments that are converted to parameters for t
 | --format | format | yaml |
 | --include-path-params | include-path-params | false |
 
-Available outputs: `diff`
+This action provides the diff as a GitHub step output named: `diff`
 
 ### Check for breaking API changes, and fail if any are found
 Copy and paste the following snippet into your build .yml file:
@@ -44,7 +47,7 @@ Additional arguments:
 | --include-checks      | include-checks | csv |
 | --include-path-params | include-path-params | false |
 
-Available outputs: `breaking`
+This action also provides the breaking changes as a GitHub step output named: `breaking`
 
 ### Generate a changelog
 Copy and paste the following snippet into your build .yml file:
@@ -62,4 +65,4 @@ Additional arguments:
 |--------|--------|--------|
 | --include-path-params | include-path-params | false |
 
-Available outputs: `changelog`
+This action also provides the changelog as a GitHub step output named: `changelog`
