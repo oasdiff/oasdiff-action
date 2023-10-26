@@ -43,7 +43,9 @@ fi
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 
 echo "diff<<$delimiter" >>$GITHUB_OUTPUT
-[ -n "$output" ] && echo "$output" >>$GITHUB_OUTPUT
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_OUTPUT
+fi
 echo "$delimiter" >>$GITHUB_OUTPUT
 
 if [ "$format" = "text" && -n "$output" ]; then

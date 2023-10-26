@@ -38,11 +38,17 @@ delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 output=$(echo "$output" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g")
 
 echo "changelog<<$delimiter" >>$GITHUB_OUTPUT
-[ -n "$output" ] && echo "$output" >>$GITHUB_OUTPUT
-[ -z "$output" ] && echo "No changes in the OpenAPI spec" >>$GITHUB_OUTPUT
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No changes in the OpenAPI spec" >>$GITHUB_OUTPUT
+fi
 echo "$delimiter" >>$GITHUB_OUTPUT
 
 echo '```' >>$GITHUB_STEP_SUMMARY
-[ -n "$output" ] && echo "$output" >>$GITHUB_STEP_SUMMARY
-[ -z "$output" ] && echo "No changes in the OpenAPI spec" >>$GITHUB_STEP_SUMMARY
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_STEP_SUMMARY
+else
+    echo "No changes in the OpenAPI spec" >>$GITHUB_STEP_SUMMARY
+fi
 echo '```' >>$GITHUB_STEP_SUMMARY
