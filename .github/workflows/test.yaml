@@ -1,4 +1,4 @@
-name: "Test OpenAPI Spec Diff Action"
+name: 'Test OpenAPI Spec Diff Action'
 on:
   pull_request:
   push:
@@ -13,9 +13,20 @@ jobs:
         id: test_ete
         uses: ./diff
         with:
-          base: "specs/base.yaml"
-          revision: "specs/revision.yaml"
-          format: "text"
+          base: 'specs/base.yaml'
+          revision: 'specs/revision.yaml'
+          format: 'text'
+      - name: Test output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_ete.outputs.diff }}
+          $delimiter
+          )
+          if [ -z "$output" ]; then
+            echo "Missing output from action" >&2
+            exit 1
+          fi
   oas_diff_breaking_changes_job:
     runs-on: ubuntu-latest
     name: A job to test OpenAPI Spec breaking changes
@@ -29,6 +40,17 @@ jobs:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
           fail-on-diff: false
+      - name: Test output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ -z "$output" ]; then
+            echo "Missing output from action" >&2
+            exit 1
+          fi
   oas_diff_changelog_tag_job:
     runs-on: ubuntu-latest
     name: A job to test tag release of OpenAPI Spec changelog action
@@ -41,3 +63,14 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+      - name: Test output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_changelog.outputs.changelog }}
+          $delimiter
+          )
+          if [ -z "$output" ]; then
+            echo "Missing output from action" >&2
+            exit 1
+          fi
