@@ -20,6 +20,7 @@ fi
 if [ -n "$include_checks" ]; then
     flags="${flags} --include-checks $include_checks"
 fi
+flags="${flags} --format githubactions"
 echo "flags: $flags"
 
 if [ -n "$flags" ]; then
