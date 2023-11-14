@@ -6,8 +6,10 @@ readonly revision="$2"
 readonly fail_on_diff="$3" 
 readonly include_checks="$4"
 readonly include_path_params="$5"
+readonly deprecation_days_beta="$6"
+readonly deprecation_days_stable="$7"
 
-echo "running oasdiff breaking base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params"
+echo "running oasdiff breaking base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable"
 
 # Build flags to pass in command
 flags=""
@@ -19,6 +21,12 @@ if [ "$include_path_params" = "true" ]; then
 fi
 if [ -n "$include_checks" ]; then
     flags="${flags} --include-checks $include_checks"
+fi
+if [ -n "$deprecation_days_beta" ]; then
+    flags="${flags} --deprecation-days-beta $deprecation_days_beta"
+fi
+if [ -n "$deprecation_days_stable" ]; then
+    flags="${flags} --deprecation-days-stable $deprecation_days_stable"
 fi
 echo "flags: $flags"
 
