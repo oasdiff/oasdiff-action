@@ -29,6 +29,31 @@ jobs:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
           fail-on-diff: false
+  oas_diff_breaking_deprecations_job:
+    runs-on: ubuntu-latest
+    name: A job to test OpenAPI Spec breaking deprecations
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Create deprecated specs
+        run: |
+          cp specs/base.yaml specs/deprecated.yaml
+          # Deprecate Beta in 14 days
+          sed -i "/operationId: listPets/s/$/\n      deprecated: true/" specs/deprecated.yaml
+          sed -i "/operationId: listPets/s/$/\n      x-stability-level: beta/" specs/deprecated.yaml
+          sed -i "/operationId: listPets/s/$/\n      x-sunset: $(date --date="14 day" "+%Y-%m-%d")/" specs/deprecated.yaml
+          # Deprecate Stable in 21 days
+          sed -i "/operationId: createPets/s/$/\n      deprecated: true/" specs/deprecated.yaml
+          sed -i "/operationId: createPets/s/$/\n      x-sunset: $(date --date="21 day" "+%Y-%m-%d")/" specs/deprecated.yaml
+      - name: Running OpenAPI Spec check breaking action
+        id: test_breaking_deprecations
+        uses: ./breaking
+        with:
+          base: specs/base.yaml
+          revision: specs/deprecated.yaml
+          fail-on-diff: true
+          deprecation-days-beta: 14
+          deprecation-days-stable: 21
   oas_diff_changelog_tag_job:
     runs-on: ubuntu-latest
     name: A job to test tag release of OpenAPI Spec changelog action
