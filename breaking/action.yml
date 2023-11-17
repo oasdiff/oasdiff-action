@@ -21,11 +21,9 @@ inputs:
   deprecation-days-beta:
     description: 'Consider minimum sunset period for deprecation of beta API endpoints'
     required: false
-    default: '31'
   deprecation-days-stable:
     description: 'Consider minimum sunset period for deprecation of stable API endpoints'
     required: false
-    default: '180'
 runs:
   using: 'docker'
   image: 'Dockerfile'
