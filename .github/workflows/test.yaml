@@ -35,22 +35,19 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: Create deprecated specs
+      - name: Set date for deprecated specs
         run: |
-          cp specs/base.yaml specs/deprecated.yaml
           # Deprecate Beta in 14 days
-          sed -i "/operationId: listPets/s/$/\n      deprecated: true/" specs/deprecated.yaml
-          sed -i "/operationId: listPets/s/$/\n      x-stability-level: beta/" specs/deprecated.yaml
-          sed -i "/operationId: listPets/s/$/\n      x-sunset: $(date --date="14 day" "+%Y-%m-%d")/" specs/deprecated.yaml
+          sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+          2kwnFPhViCLjoc6CoB
           # Deprecate Stable in 21 days
-          sed -i "/operationId: createPets/s/$/\n      deprecated: true/" specs/deprecated.yaml
-          sed -i "/operationId: createPets/s/$/\n      x-sunset: $(date --date="21 day" "+%Y-%m-%d")/" specs/deprecated.yaml
+          sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
       - name: Running OpenAPI Spec check breaking action
         id: test_breaking_deprecations
         uses: ./breaking
         with:
           base: specs/base.yaml
-          revision: specs/deprecated.yaml
+          revision: specs/base-deprecation.yaml
           fail-on-diff: true
           deprecation-days-beta: 14
           deprecation-days-stable: 21
