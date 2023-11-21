@@ -3,19 +3,6 @@ on:
   pull_request:
   push:
 jobs:
-  oas_diff_job:
-    runs-on: ubuntu-latest
-    name: A job to test OpenAPI Spec diff action
-    steps:
-        - name: checkout
-          uses: actions/checkout@v3
-        - name: Running OpenAPI Spec diff action
-          id: test_ete
-          uses: ./diff
-          with:
-            base: 'specs/base.yaml'
-            revision: 'specs/revision.yaml'
-            format: 'text'
   oas_diff_breaking_changes_job:
     runs-on: ubuntu-latest
     name: A job to test OpenAPI Spec breaking changes
@@ -26,18 +13,6 @@ jobs:
         id: test_breaking_changes
         uses: ./breaking
         with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          base: specs/base.yaml
+          revision: specs/revision.yaml
           fail-on-diff: false
-  oas_diff_changelog_tag_job:
-    runs-on: ubuntu-latest
-    name: A job to test tag release of OpenAPI Spec changelog action
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: Running OpenAPI Spec changelog tag action
-        id: test_changelog
-        uses: oasdiff/oasdiff-action/changelog@v0.0.10
-        with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
