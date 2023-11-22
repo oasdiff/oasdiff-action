@@ -39,7 +39,6 @@ jobs:
         run: |
           # Deprecate Beta in 14 days
           sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
-          2kwnFPhViCLjoc6CoB
           # Deprecate Stable in 21 days
           sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
       - name: Running OpenAPI Spec check breaking action
