@@ -34,6 +34,7 @@ echo "flags: $flags"
 ### GITHUB_OUTPUT ###
 
 output=$(oasdiff breaking "$base" "$revision" $flags)
+
 # GitHub Actions limits output to 1MB, see: https://docs.github.com/en/actions/using-jobs/defining-outputs-for-jobs
 # We count bytes because unicode has multibyte characters
 size=$(echo "$output" | wc -c)
@@ -41,7 +42,9 @@ if [ "$size" -ge "1000000" ]; then
     echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
     output=$(echo "$output" | head -c $1000000)
 fi
+
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+echo "breaking<<$delimiter" >>$GITHUB_OUTPUT
 if [ -n "$output" ]; then
     echo "$output" >>$GITHUB_OUTPUT
 else
