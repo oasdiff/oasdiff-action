@@ -41,10 +41,12 @@ if [ "$size" -ge "1000000" ]; then
     echo "WARN: Diff exceeds the 1MB limit, truncating output..." >&2
     output=$(echo "$output" | head -c $1000000)
 fi
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 if [ -n "$output" ]; then
     echo "$output" >>$GITHUB_OUTPUT
 else
     echo "No API breaking changes" >>$GITHUB_OUTPUT
 fi
+echo "$delimiter" >>$GITHUB_OUTPUT
 
 ### END GITHUB_OUTPUT ###
