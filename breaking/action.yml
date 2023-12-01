@@ -24,6 +24,9 @@ inputs:
   deprecation-days-stable:
     description: 'Consider minimum sunset period for deprecation of stable API endpoints'
     required: false
+outputs:
+  breaking:
+    description: 'Output summary of API Breaking Changes, encompassing both warnings and errors'
 runs:
   using: 'docker'
   image: 'Dockerfile'

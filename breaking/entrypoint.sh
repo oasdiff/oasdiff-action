@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-readonly base="$1" 
-readonly revision="$2" 
-readonly fail_on_diff="$3" 
+readonly base="$1"
+readonly revision="$2"
+readonly fail_on_diff="$3"
 readonly include_checks="$4"
 readonly include_path_params="$5"
 readonly deprecation_days_beta="$6"
@@ -28,10 +28,8 @@ fi
 if [ -n "$deprecation_days_stable" ]; then
     flags="${flags} --deprecation-days-stable $deprecation_days_stable"
 fi
+flags="${flags} --format githubactions"
 echo "flags: $flags"
 
-if [ -n "$flags" ]; then
-    oasdiff breaking "$base" "$revision" $flags
-else
-    oasdiff breaking "$base" "$revision"
-fi
+output=$(oasdiff breaking "$base" "$revision" $flags)
+echo $output
