@@ -5,7 +5,7 @@ on:
 jobs:
   oasdiff_diff:
     runs-on: ubuntu-latest
-    name: A job to test diff action
+    name: Test diff action
     steps:
         - name: checkout
           uses: actions/checkout@v3
@@ -18,7 +18,7 @@ jobs:
             format: 'text'
   oasdiff_breaking:
     runs-on: ubuntu-latest
-    name: A job to test breaking changes
+    name: Test breaking changes
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
           fail-on-diff: false
   oasdiff_breaking_deprecation:
     runs-on: ubuntu-latest
-    name: A job to test breaking changes with deprecation
+    name: Test breaking changes with deprecation
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -52,7 +52,7 @@ jobs:
           deprecation-days-stable: 21
   oasdiff_changelog:
     runs-on: ubuntu-latest
-    name: A job to test generation of changelog
+    name: Test generation of changelog
     steps:
       - name: checkout
         uses: actions/checkout@v3

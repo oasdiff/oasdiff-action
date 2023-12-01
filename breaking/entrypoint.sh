@@ -32,6 +32,4 @@ flags="${flags} --format githubactions"
 echo "flags: $flags"
 
 output=$(oasdiff breaking "$base" "$revision" $flags)
-echo "***start***"
 echo $output
-echo "***end***"
