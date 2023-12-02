@@ -28,7 +28,7 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
-          fail-on-diff: false
+          fail-on-diff: true
   oasdiff_breaking_deprecation:
     runs-on: ubuntu-latest
     name: Test breaking changes with deprecation
