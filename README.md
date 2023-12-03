@@ -44,6 +44,7 @@ Additional arguments:
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 
+This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
 
 ### Generate a changelog
 Copy and paste the following snippet into your build .yml file:
