@@ -31,5 +31,19 @@ fi
 flags="${flags} --format githubactions"
 echo "flags: $flags"
 
-output=$(oasdiff breaking "$base" "$revision" $flags)
-echo $output
+output_github_action_summary=$(oasdiff breaking "$base" "$revision" $flags)
+# writes the summary to log and to github action summary
+echo $output_github_action_summary
+
+# *** github action step output ***
+
+# output name
+echo "breaking" >>$GITHUB_OUTPUT
+output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No breaking changes" >>$GITHUB_OUTPUT
+fi
+
+# *** github action step output ***
