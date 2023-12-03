@@ -36,7 +36,7 @@ jobs:
           ${{ steps.test_breaking_changes.outputs.breaking }}
           $delimiter
           )
-          if [[ "$output" != "6 breaking changes: 2 error, 4 warning"]]; then
+          if [ "$output" != "6 breaking changes: 2 error, 4 warning"]; then
             echo "Expected output '6 breaking changes: 2 error, 4 warning' but got '$output'" >&2
             exit 1
           fi
