@@ -4,7 +4,7 @@
 GitHub actions for comparing OpenAPI specs and detect breaking changes, based on [oasdiff](https://github.com/Tufin/oasdiff) tool
 
 ## How to use?
-Depends on your use case:
+Depending on your use case, refer below for instructions on generating reports for differences, breaking changes and changelog.
 
 ### Generate a diff report
 Copy and paste the following snippet into your build .yml file:
