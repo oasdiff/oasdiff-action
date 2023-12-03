@@ -39,11 +39,11 @@ echo $output_github_action_summary
 
 # output name
 echo "breaking" >>$GITHUB_OUTPUT
-# output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
-# if [ -n "$output" ]; then
-#     echo "$output" >>$GITHUB_OUTPUT
-# else
-#     echo "No breaking changes" >>$GITHUB_OUTPUT
-# fi
+output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No breaking changes" >>$GITHUB_OUTPUT
+fi
 
 # *** github action step output ***
