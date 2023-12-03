@@ -28,12 +28,7 @@ fi
 if [ -n "$deprecation_days_stable" ]; then
     flags="${flags} --deprecation-days-stable $deprecation_days_stable"
 fi
-flags="${flags} --format githubactions"
 echo "flags: $flags"
-
-output_github_action_summary=$(oasdiff breaking "$base" "$revision" $flags)
-# writes the summary to log and to github action summary
-echo $output_github_action_summary
 
 # *** github action step output ***
 
@@ -45,7 +40,11 @@ echo $output_github_action_summary
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>$GITHUB_OUTPUT
 
-output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
+if [ -n "$flags" ]; then
+    output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
+else
+    output=$(oasdiff breaking "$base" "$revision" | head -n 1)
+fi
 if [ -n "$output" ]; then
     echo "$output" >>$GITHUB_OUTPUT
 else
@@ -55,3 +54,8 @@ fi
 echo "$delimiter" >>$GITHUB_OUTPUT
 
 # *** github action step output ***
+
+flags="${flags} --format githubactions"
+output_github_action_summary=$(oasdiff breaking "$base" "$revision" $flags)
+# writes the summary to log and to github action summary
+echo $output_github_action_summary
