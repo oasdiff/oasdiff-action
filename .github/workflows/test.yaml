@@ -34,9 +34,9 @@ jobs:
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
           output=$(cat <<-$delimiter
           ${{ steps.test_breaking_changes.outputs.breaking }}
-          $delimiter)
-          echo $output
-          if [ "$output" != "6 breaking changes: 2 error, 4 warning"]; then
+          $delimiter
+          )
+          if [[ "$output" != "6 breaking changes: 2 error, 4 warning"]]; then
             echo "Expected output '6 breaking changes: 2 error, 4 warning' but got '$output'" >&2
             exit 1
           fi
