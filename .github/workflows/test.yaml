@@ -31,7 +31,10 @@ jobs:
           fail-on-diff: false
       - name: Test breaking changes output
         run: |
-          output=$(cat ${{ steps.test_breaking_changes.outputs.breaking }})
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter)
           echo $output
           if [ -z "$output" ]; then
             echo "Missing output from action" >&2
