@@ -37,13 +37,21 @@ echo $output_github_action_summary
 
 # *** github action step output ***
 
-# output name
-echo "breaking" >>$GITHUB_OUTPUT
-# output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
-# if [ -n "$output" ]; then
-#     echo "$output" >>$GITHUB_OUTPUT
-# else
-#     echo "No breaking changes" >>$GITHUB_OUTPUT
-# fi
+# output name should be in the format of syntax for multiple lines:
+# {name}<<{delimiter}
+# {value}
+# {delimiter}
+# see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+echo "breaking<<$delimiter" >>$GITHUB_OUTPUT
+
+output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
+if [ -n "$output" ]; then
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No breaking changes" >>$GITHUB_OUTPUT
+fi
+
+echo "$delimiter" >>$GITHUB_OUTPUT
 
 # *** github action step output ***

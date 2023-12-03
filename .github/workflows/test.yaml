@@ -29,14 +29,14 @@ jobs:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
           fail-on-diff: false
-      # - name: Test breaking changes output
-      #   run: |
-      #     output=$(cat ${{ steps.test_breaking_changes.outputs.breaking }})
-      #     echo $output
-      #     if [ -z "$output" ]; then
-      #       echo "Missing output from action" >&2
-      #       exit 1
-      #     fi
+      - name: Test breaking changes output
+        run: |
+          output=$(cat ${{ steps.test_breaking_changes.outputs.breaking }})
+          echo $output
+          if [ -z "$output" ]; then
+            echo "Missing output from action" >&2
+            exit 1
+          fi
   oasdiff_breaking_deprecation:
     runs-on: ubuntu-latest
     name: Test breaking changes with deprecation
