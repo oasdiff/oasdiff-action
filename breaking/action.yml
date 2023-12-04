@@ -1,5 +1,5 @@
-name: 'OpenAPI Spec: check for breaking API changes'
-description: 'Detect breaking changes in OpenAPI Specification 3'
+name: 'Check for API breaking changes'
+description: 'Detect breaking changes'
 inputs:
   base:
     description: 'Path of original OpenAPI spec in YAML or JSON format'
@@ -26,7 +26,7 @@ inputs:
     required: false
 outputs:
   breaking:
-    description: 'Output summary of API Breaking Changes, encompassing both warnings and errors'
+    description: 'Output summary of API breaking changes, encompassing both warnings and errors'
 runs:
   using: 'docker'
   image: 'Dockerfile'

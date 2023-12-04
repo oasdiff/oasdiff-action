@@ -9,7 +9,7 @@ readonly include_path_params="$5"
 readonly deprecation_days_beta="$6"
 readonly deprecation_days_stable="$7"
 
-echo "running oasdiff breaking base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable"
 
 # Build flags to pass in command
 flags=""
@@ -32,7 +32,7 @@ echo "flags: $flags"
 
 # *** github action step output ***
 
-# output name should be in the format of syntax for multiple lines:
+# output name should be in the syntax of multiple lines:
 # {name}<<{delimiter}
 # {value}
 # {delimiter}
@@ -55,7 +55,8 @@ echo "$delimiter" >>$GITHUB_OUTPUT
 
 # *** github action step output ***
 
+# Updating GitHub Action summary with formatted output
 flags="${flags} --format githubactions"
 output_github_action_summary=$(oasdiff breaking "$base" "$revision" $flags)
-# writes the summary to log and to github action summary
+# Writes the summary to log and updates GitHub Action summary
 echo $output_github_action_summary
