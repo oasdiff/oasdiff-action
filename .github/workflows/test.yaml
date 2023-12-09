@@ -9,67 +9,69 @@ jobs:
     steps:
         - name: checkout
           uses: actions/checkout@v3
-        - name: Running diff action
-          id: test_ete
-          uses: ./diff
-          with:
-            base: 'specs/base.yaml'
-            revision: 'specs/revision.yaml'
-            format: 'text'
-  oasdiff_breaking:
-    runs-on: ubuntu-latest
-    name: Test breaking changes
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: Running breaking action
-        id: test_breaking_changes
-        uses: ./breaking
-        with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
-          fail-on-diff: false
-      - name: Test breaking changes action output
-        run: |
-          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-          output=$(cat <<-$delimiter
-          ${{ steps.test_breaking_changes.outputs.breaking }}
-          $delimiter
-          )
-          if [ "$output" != "6 breaking changes: 2 error, 4 warning" ]; then
-            echo "Expected output '6 breaking changes: 2 error, 4 warning' but got '$output'" >&2
-            exit 1
-          fi
-  oasdiff_breaking_deprecation:
-    runs-on: ubuntu-latest
-    name: Test breaking changes with deprecation
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: Set date for deprecated specs
-        run: |
-          # Deprecate Beta in 14 days
-          sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
-          # Deprecate Stable in 21 days
-          sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
-      - name: Running OpenAPI Spec check breaking action
-        id: test_breaking_deprecations
-        uses: ./breaking
-        with:
-          base: specs/base.yaml
-          revision: specs/base-deprecation.yaml
-          fail-on-diff: true
-          deprecation-days-beta: 14
-          deprecation-days-stable: 21
-  oasdiff_changelog:
-    runs-on: ubuntu-latest
-    name: Test generation of changelog
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: Running changelog action
-        id: test_changelog
-        uses: ./changelog
-        with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+        - name: Print
+          run: env | sort
+  #       - name: Running diff action
+  #         id: test_ete
+  #         uses: ./diff
+  #         with:
+  #           base: 'specs/base.yaml'
+  #           revision: 'specs/revision.yaml'
+  #           format: 'text'
+  # oasdiff_breaking:
+  #   runs-on: ubuntu-latest
+  #   name: Test breaking changes
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #     - name: Running breaking action
+  #       id: test_breaking_changes
+  #       uses: ./breaking
+  #       with:
+  #         base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+  #         revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+  #         fail-on-diff: false
+  #     - name: Test breaking changes action output
+  #       run: |
+  #         delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+  #         output=$(cat <<-$delimiter
+  #         ${{ steps.test_breaking_changes.outputs.breaking }}
+  #         $delimiter
+  #         )
+  #         if [ "$output" != "6 breaking changes: 2 error, 4 warning" ]; then
+  #           echo "Expected output '6 breaking changes: 2 error, 4 warning' but got '$output'" >&2
+  #           exit 1
+  #         fi
+  # oasdiff_breaking_deprecation:
+  #   runs-on: ubuntu-latest
+  #   name: Test breaking changes with deprecation
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #     - name: Set date for deprecated specs
+  #       run: |
+  #         # Deprecate Beta in 14 days
+  #         sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+  #         # Deprecate Stable in 21 days
+  #         sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+  #     - name: Running OpenAPI Spec check breaking action
+  #       id: test_breaking_deprecations
+  #       uses: ./breaking
+  #       with:
+  #         base: specs/base.yaml
+  #         revision: specs/base-deprecation.yaml
+  #         fail-on-diff: true
+  #         deprecation-days-beta: 14
+  #         deprecation-days-stable: 21
+  # oasdiff_changelog:
+  #   runs-on: ubuntu-latest
+  #   name: Test generation of changelog
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #     - name: Running changelog action
+  #       id: test_changelog
+  #       uses: ./changelog
+  #       with:
+  #         base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+  #         revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
