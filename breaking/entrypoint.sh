@@ -65,6 +65,5 @@ echo "$delimiter" >>$GITHUB_OUTPUT
 
 # Updating GitHub Action summary with formatted output
 flags="${flags} --format githubactions"
-output_github_action_summary=$(oasdiff breaking "$base" "$revision" $flags)
 # Writes the summary to log and updates GitHub Action summary
-echo $output_github_action_summary
+oasdiff breaking "$base" "$revision" $flags
