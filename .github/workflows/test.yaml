@@ -10,7 +10,7 @@ jobs:
         - name: checkout
           uses: actions/checkout@v3
         - name: Print
-          run: env | sort
+          run: echo "::error title=request-parameter-max-length-decreased::at data/openapi-test1.yaml, in API GET /api/{domain}/{project}/badges/security-score for the 'query' request parameter 'token', the maxLength was decreased from '30' to '29'\n::error title=request-parameter-enum-value-removed::at data/openapi-test1.yaml, in API GET /api/{domain}/{project}/install-command removed the enum value 'test1' from the 'path' request parameter 'project'"
   #       - name: Running diff action
   #         id: test_ete
   #         uses: ./diff
