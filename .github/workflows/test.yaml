@@ -11,7 +11,8 @@ jobs:
           uses: actions/checkout@v3
         - name: Print
           run: 
-            echo "::error title=request-parameter-max-length-decreased::effi\n::error title=request-parameter-enum-value-removed::bs\n"
+            echo "::error title=request-parameter-max-length-decreased::effi"
+            echo "::error title=request-parameter-enum-value-removed::bs"
   #       - name: Running diff action
   #         id: test_ete
   #         uses: ./diff
