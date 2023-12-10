@@ -10,7 +10,9 @@ jobs:
         - name: checkout
           uses: actions/checkout@v3
         - name: Print
-          run: echo "::error title=request-parameter-max-length-decreased::at data/openapi-test1.yaml in API GET\\n::error title=request-parameter-enum-value-removed::at data/openapi-test1.yaml in API GET\n"
+          run: 
+            echo "::error title=request-parameter-max-length-decreased::at data/openapi-test1.yaml in API GET"
+            echo "::error title=request-parameter-enum-value-removed::at data/openapi-test1.yaml in API GET\n"
   #       - name: Running diff action
   #         id: test_ete
   #         uses: ./diff
