@@ -11,8 +11,8 @@ jobs:
           uses: actions/checkout@v3
         - name: Print
           run: 
-            printf "::error title=request-parameter-max-length-decreased::effi\n::error title=request-parameter-enum-value-removed::bs\n"
-  #       - name: Running diff action
+            printf "::error title=request-parameter-max-length-decreased::at data/openapi-test1.yaml, in API GET /api/{domain}/{project}/badges/security-score for the 'query' request parameter 'token', the maxLength was decreased from '30' to '29'\n::error title=request-parameter-enum-value-removed::at data/openapi-test1.yaml, in API GET /api/{domain}/{project}/install-command removed the enum value 'test1' from the 'path' request parameter 'project'\n::warning title=request-parameter-pattern-added::at data/openapi-test1.yaml, in API GET /api/{domain}/{project}/badges/security-score added the pattern '^(?:[\w-./:]+)$' to the 'query' request parameter 'image'\n"  
+            #       - name: Running diff action
   #         id: test_ete
   #         uses: ./diff
   #         with:
