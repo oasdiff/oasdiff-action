@@ -13,8 +13,8 @@ jobs:
           id: test_ete
           uses: ./diff
           with:
-            base: 'specs/base.yaml'
-            revision: 'specs/revision.yaml'
+            base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+            revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
             format: 'text'
   oasdiff_breaking:
     runs-on: ubuntu-latest
@@ -26,8 +26,8 @@ jobs:
         id: test_breaking_changes
         uses: ./breaking
         with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
           fail-on-diff: false
       - name: Test breaking changes action output
         run: |
