@@ -1,0 +1,15 @@
+extends: 
+  - "spectral:oas"
+
+rules:
+
+  snow-info-version-format:
+    description: Version must be in MAJOR.MINOR.PATCH format (e.g. 1.0.0).
+    message: "{{value}} | {{description}}"
+    severity: error
+    given: $.info
+    then:
+      field: version
+      function: pattern
+      functionOptions:
+        match: "^\\d+.\\d+.\\d+"
