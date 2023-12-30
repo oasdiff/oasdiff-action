@@ -47,4 +47,5 @@ fi
 
 echo "$delimiter" >>$GITHUB_OUTPUT
 
+# *** github action step output ***
 
