@@ -75,4 +75,10 @@ jobs:
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
       - name: Test changelog action output
         run: |
-          echo "<!-- spec_changelog -->\n${{join(steps.test_changelog.outputs.*, '\n')}}\n<!-- spec_changelog -->"
+          output=${{steps.test_changelog.outputs.*}}
+          if [[ -n $"output" ]]; then
+            echo "<!-- spec_changelog -->\n${{join(steps.test_changelog.outputs.*, '\n')}}\n<!-- spec_changelog -->"
+          else
+            echo "No outputs from changelog action"
+            exit 1
+          fi  
