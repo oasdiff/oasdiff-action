@@ -73,3 +73,6 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+      - name: Test changelog action output
+        run: |
+          echo "<!-- spec_changelog -->\n${{join(steps.test_changelog.outputs.*, '\n')}}\n<!-- spec_changelog -->"
