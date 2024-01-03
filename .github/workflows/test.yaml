@@ -76,8 +76,8 @@ jobs:
       - name: Test changelog action output
         run: |
           output=${{steps.test_changelog.outputs.*}}
-          if [[ -n ${"output"} ]]; then
-            echo "${"output}"
+          if [[ -n "${output}" ]]; then
+            echo "${output}"
           else
             echo "No outputs from changelog action"
             exit 1
