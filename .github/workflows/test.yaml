@@ -72,11 +72,11 @@ jobs:
         uses: ./changelog
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
       - name: Test changelog action output
         run: |
           output="${{steps.test_changelog.outputs.changelog}}"
           if [[  "${output}" == "No changelog changes" ]]; then
-            echo "Expected output about 6  changes but got ${output}" >&2
+            echo "Expected output '20 changes: 2 error, 4 warning, 14 info' but got '${output}'" >&2
             exit 1
           fi  
