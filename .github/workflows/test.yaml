@@ -72,7 +72,7 @@ jobs:
         uses: ./changelog
         with:
           base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
       - name: Test changelog action output
         run: |
           output="${{steps.test_changelog.outputs.changelog}}"
