@@ -38,7 +38,7 @@ if [ -n "$output" ]; then
     size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
         echo "WARN: changelog exceeds the 1MB limit, truncating output..." >&2
-        output=$(echo "$output" | head -c $1000000)
+        output=$(echo "$output" | head -c 1000000)
     fi
     echo "$output" >>$GITHUB_OUTPUT
 else
