@@ -75,8 +75,9 @@ jobs:
           revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
       - name: Test changelog action output
         run: |
+          readonly expected_output="20 changes: 2 error, 4 warning, 14 info"
           output=$(echo "${{steps.test_changelog.outputs.changelog}}" | head -n 1)
-          if [[  "${output}" != "20 changes: 2 error, 4 warning, 14 info" ]]; then
+          if [[  "${output}" != "${expected_output}" ]]; then
             echo "Expected output '20 changes: 2 error, 4 warning, 14 info' but got '${output}'" >&2
             exit 1
           fi  
