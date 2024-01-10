@@ -16,8 +16,36 @@ echo "flags: $flags"
 
 set -o pipefail
 
+# *** github action step output ***
+
+# output name should be in the syntax of multiple lines:
+# {name}<<{delimiter}
+# {value}
+# {delimiter}
+# see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+echo "changelog<<$delimiter" >>$GITHUB_OUTPUT
+
 if [ -n "$flags" ]; then
-    oasdiff changelog "$base" "$revision" $flags
+    output=$(oasdiff changelog "$base" "$revision" $flags)
 else
-    oasdiff changelog "$base" "$revision"
+    output=$(oasdiff changelog "$base" "$revision")
 fi
+
+if [ -n "$output" ]; then
+    # github-action limits output to 1MB
+    # we count bytes because unicode has multibyte characters
+    size=$(echo "$output" | wc -c)
+    if [ "$size" -ge "1000000" ]; then
+        echo "WARN: changelog exceeds the 1MB limit, truncating output..." >&2
+        output=$(echo "$output" | head -c 1000000)
+    fi
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No changelog changes" >>$GITHUB_OUTPUT
+fi
+
+echo "$delimiter" >>$GITHUB_OUTPUT
+
+# *** github action step output ***
+
