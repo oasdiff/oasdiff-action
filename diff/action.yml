@@ -23,6 +23,9 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+outputs:
+  diff:
+    description: 'Output summary of API diff'
 runs:
   using: 'docker'
   image: 'Dockerfile'

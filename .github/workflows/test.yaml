@@ -30,6 +30,17 @@ jobs:
             revision: 'specs/base-exclude-elements.yaml'
             format: 'text'
             exclude-elements: 'description,title,summary'
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_exclude_elements.outputs.diff }}
+            $delimiter
+            )
+            if [ "$output" != "No changes" ]; then
+              echo "Expected output 'No changes' but got '$output'" >&2
+              exit 1
+            fi
   oasdiff_breaking:
     runs-on: ubuntu-latest
     name: Test breaking changes

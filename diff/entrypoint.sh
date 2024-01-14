@@ -26,10 +26,35 @@ if [ "$exclude_elements" != "" ]; then
 fi
 echo "flags: $flags"
 
+# *** github action step output ***
+
+# output name should be in the syntax of multiple lines:
+# {name}<<{delimiter}
+# {value}
+# {delimiter}
+# see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+echo "diff<<$delimiter" >>$GITHUB_OUTPUT
+
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    oasdiff diff "$base" "$revision" $flags
+    output=$(oasdiff diff "$base" "$revision" $flags | head -n 1)
 else
-    oasdiff diff "$base" "$revision"
+    output=$(oasdiff diff "$base" "$revision" | head -n 1)
 fi
+
+if [ -n "$output" ]; then
+    # github-action limits output to 1MB
+    # we count bytes because unicode has multibyte characters
+    size=$(echo "$output" | wc -c)
+    if [ "$size" -ge "1000000" ]; then
+        echo "WARN: breaking exceeds the 1MB limit, truncating output..." >&2
+        output=$(echo "$output" | head -c $1000000)
+    fi
+    echo "$output" >>$GITHUB_OUTPUT
+else
+    echo "No changes" >>$GITHUB_OUTPUT
+fi
+
+echo "$delimiter" >>$GITHUB_OUTPUT
