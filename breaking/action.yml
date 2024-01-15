@@ -24,6 +24,10 @@ inputs:
   deprecation-days-stable:
     description: 'Consider minimum sunset period for deprecation of stable API endpoints'
     required: false
+  exclude-elements:
+    description: 'Exclude certain kinds of changes'
+    required: false
+    default: ''
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
@@ -38,3 +42,4 @@ runs:
     - ${{ inputs.include-path-params }}
     - ${{ inputs.deprecation-days-beta }}
     - ${{ inputs.deprecation-days-stable }}
+    - ${{ inputs.exclude-elements }}

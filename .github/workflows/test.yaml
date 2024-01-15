@@ -16,6 +16,31 @@ jobs:
             base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
             revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
             format: 'text'
+  oasdiff_diff_exclude_elements:
+    runs-on: ubuntu-latest
+    name: Test diff action with exclude-elements option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v3
+        - name: Running diff action with exclude-elements option
+          id: test_exclude_elements
+          uses: ./diff
+          with:
+            base: 'specs/base.yaml'
+            revision: 'specs/base-exclude-elements.yaml'
+            format: 'text'
+            exclude-elements: 'description,title,summary'
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_exclude_elements.outputs.diff }}
+            $delimiter
+            )
+            if [ "$output" != "No changes" ]; then
+              echo "Expected output 'No changes' but got '$output'" >&2
+              exit 1
+            fi
   oasdiff_breaking:
     runs-on: ubuntu-latest
     name: Test breaking changes

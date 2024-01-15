@@ -19,6 +19,13 @@ inputs:
     description: 'Include path parameter names in endpoint matching'
     required: false
     default: 'false'
+  exclude-elements:
+    description: 'Exclude certain kinds of changes'
+    required: false
+    default: ''
+outputs:
+  diff:
+    description: 'Output summary of API diff'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -28,3 +35,4 @@ runs:
     - ${{ inputs.format }}
     - ${{ inputs.fail-on-diff }}
     - ${{ inputs.include-path-params }}
+    - ${{ inputs.exclude-elements }}
