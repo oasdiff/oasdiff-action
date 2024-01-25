@@ -39,9 +39,9 @@ echo "diff<<$delimiter" >>$GITHUB_OUTPUT
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags | head -n 1)
+    output=$(oasdiff diff "$base" "$revision" $flags)
 else
-    output=$(oasdiff diff "$base" "$revision" | head -n 1)
+    output=$(oasdiff diff "$base" "$revision")
 fi
 
 if [ -n "$output" ]; then
@@ -49,7 +49,7 @@ if [ -n "$output" ]; then
     # we count bytes because unicode has multibyte characters
     size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
-        echo "WARN: breaking exceeds the 1MB limit, truncating output..." >&2
+        echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
         output=$(echo "$output" | head -c $1000000)
     fi
     echo "$output" >>$GITHUB_OUTPUT
