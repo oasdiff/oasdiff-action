@@ -36,6 +36,11 @@ echo "flags: $flags"
 
 # *** github action step output ***
 
+# Writes the summary to log and updates GitHub Action summary
+oasdiff breaking "$base" "$revision" $flags --format githubactions
+
+# *** github action step output ***
+
 # output name should be in the syntax of multiple lines:
 # {name}<<{delimiter}
 # {value}
@@ -64,10 +69,3 @@ else
 fi
 
 echo "$delimiter" >>$GITHUB_OUTPUT
-
-# *** github action step output ***
-
-# Updating GitHub Action summary with formatted output
-flags="${flags} --format githubactions"
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags

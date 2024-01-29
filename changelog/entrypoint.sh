@@ -30,10 +30,17 @@ set -o pipefail
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "changelog<<$delimiter" >>$GITHUB_OUTPUT
 
+set +e
 if [ -n "$flags" ]; then
-    output=$(oasdiff changelog "$base" "$revision" $flags)
+    output=$(oasdiff changelog "$base" "$revision" $flags 2>&1)
 else
-    output=$(oasdiff changelog "$base" "$revision")
+    output=$(oasdiff changelog "$base" "$revision" 2>&1)
+fi
+set -e
+
+if [[ "$output" == Error* ]]; then
+    echo "$output"
+    exit 1
 fi
 
 if [ -n "$output" ]; then
