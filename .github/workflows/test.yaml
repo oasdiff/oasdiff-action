@@ -8,7 +8,7 @@ jobs:
     name: Test diff action
     steps:
         - name: checkout
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
         - name: Running diff action
           id: test_ete
           uses: ./diff
@@ -21,7 +21,7 @@ jobs:
     name: Test diff action with exclude-elements option
     steps:
         - name: checkout
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
         - name: Running diff action with exclude-elements option
           id: test_exclude_elements
           uses: ./diff
@@ -46,7 +46,7 @@ jobs:
     name: Test breaking changes
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Running breaking action
         id: test_breaking_changes
         uses: ./breaking
@@ -70,7 +70,7 @@ jobs:
     name: Test breaking changes with deprecation
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set date for deprecated specs
         run: |
           # Deprecate Beta in 14 days
@@ -91,7 +91,7 @@ jobs:
     name: Test generation of changelog
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Running changelog action
         id: test_changelog
         uses: ./changelog
