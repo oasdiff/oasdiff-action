@@ -15,6 +15,10 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+  composed:
+    description: 'Run in composed mode'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
