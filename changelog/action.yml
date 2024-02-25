@@ -30,3 +30,4 @@ runs:
     - ${{ inputs.revision }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.composed }}

@@ -40,3 +40,4 @@ runs:
     - ${{ inputs.fail-on-diff }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.composed }}
