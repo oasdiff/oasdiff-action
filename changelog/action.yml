@@ -15,6 +15,9 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+outputs:
+  changelog:
+    description: 'Output summary of API changelog'
 runs:
   using: 'docker'
   image: 'Dockerfile'
