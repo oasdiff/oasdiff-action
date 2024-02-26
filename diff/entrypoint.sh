@@ -38,10 +38,17 @@ echo "diff<<$delimiter" >>$GITHUB_OUTPUT
 
 set -o pipefail
 
+set +e
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags)
+    output=$(oasdiff diff "$base" "$revision" $flags 2>&1)
 else
-    output=$(oasdiff diff "$base" "$revision")
+    output=$(oasdiff diff "$base" "$revision" 2>&1)
+fi
+set -e
+
+if [[ "$output" == Error* ]]; then
+    echo "$output"
+    exit 1
 fi
 
 if [ -n "$output" ]; then
