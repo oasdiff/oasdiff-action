@@ -16,6 +16,8 @@ echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff
 flags=""
 if [ "$fail_on_diff" = "true" ]; then
     flags="${flags} --fail-on WARN"
+elif [ "$fail_on_diff" != "false" ]
+    flags="${flags} --fail-on $fail_on_diff"
 fi
 if [ "$include_path_params" = "true" ]; then
     flags="${flags} --include-path-params"
