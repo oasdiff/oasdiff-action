@@ -86,6 +86,31 @@ jobs:
           fail-on-diff: true
           deprecation-days-beta: 14
           deprecation-days-stable: 21
+  oasdiff_breaking_fail_on_explicit:
+    runs-on: ubuntu-latest
+    name: Test breaking changes fail-on
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running breaking action
+        id: test_breaking_changes
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          fail-on-diff: false 
+          fail-on: ERR
+      - name: Test breaking changes action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "1 breaking changes: 1 error, 0 warning" ]; then
+            echo "Expected output '6 breaking changes: 2 error, 4 warning' but got '$output'" >&2
+            exit 1
+          fi
   oasdiff_changelog:
     runs-on: ubuntu-latest
     name: Test generation of changelog
