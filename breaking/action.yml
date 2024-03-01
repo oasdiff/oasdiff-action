@@ -11,6 +11,10 @@ inputs:
     description: 'Fail with exit code 1 if any breaking changes are found'
     required: false
     default: 'true'
+  fail-on:
+    description: 'Fail with exit code 1 if breaking changes are found at a particular status or severity level, e.g. ERR'
+    required: false
+    default: ''
   include-checks:
     description: 'Include any of the defined optional breaking changes checks'
     required: false
@@ -38,6 +42,7 @@ runs:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
     - ${{ inputs.fail-on-diff }}
+    - ${{ inputs.fail-on }}
     - ${{ inputs.include-checks }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.deprecation-days-beta }}
