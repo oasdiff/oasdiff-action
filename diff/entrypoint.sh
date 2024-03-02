@@ -5,7 +5,7 @@ write_output () {
     local output="$1"
     local truncate_if_needed="$2"
     if [ -n "$output_to_file" ]; then
-        echo "$output" >> "$output-to-file"
+        echo "$output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
