@@ -1,39 +1,43 @@
-name: 'Check for API breaking changes'
-description: 'Detect breaking changes'
+name: "Check for API breaking changes"
+description: "Detect breaking changes"
 inputs:
   base:
-    description: 'Path of original OpenAPI spec in YAML or JSON format'
+    description: "Path of original OpenAPI spec in YAML or JSON format"
     required: true
   revision:
-    description: 'Path of revised OpenAPI spec in YAML or JSON format'
+    description: "Path of revised OpenAPI spec in YAML or JSON format"
     required: true
   fail-on-diff:
-    description: 'Fail with exit code 1 if any breaking changes are found'
+    description: "Fail with exit code 1 if any breaking changes are found"
     required: false
-    default: 'true'
+    default: "true"
   include-checks:
-    description: 'Include any of the defined optional breaking changes checks'
+    description: "Include any of the defined optional breaking changes checks"
     required: false
   include-path-params:
-    description: 'Include path parameter names in endpoint matching'
+    description: "Include path parameter names in endpoint matching"
     required: false
-    default: 'false'
+    default: "false"
   deprecation-days-beta:
-    description: 'Consider minimum sunset period for deprecation of beta API endpoints'
+    description: "Consider minimum sunset period for deprecation of beta API endpoints"
     required: false
   deprecation-days-stable:
-    description: 'Consider minimum sunset period for deprecation of stable API endpoints'
+    description: "Consider minimum sunset period for deprecation of stable API endpoints"
     required: false
   exclude-elements:
-    description: 'Exclude certain kinds of changes'
+    description: "Exclude certain kinds of changes"
     required: false
-    default: ''
+    default: ""
+  output-to-file:
+    description: "Output to a file at the given path"
+    required: false
+    default: ""
 outputs:
   breaking:
-    description: 'Output summary of API breaking changes, encompassing both warnings and errors'
+    description: "Output summary of API breaking changes, encompassing both warnings and errors"
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
+  using: "docker"
+  image: "Dockerfile"
   args:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
@@ -43,3 +47,4 @@ runs:
     - ${{ inputs.deprecation-days-beta }}
     - ${{ inputs.deprecation-days-stable }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.output-to-file }}

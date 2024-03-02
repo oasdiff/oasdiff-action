@@ -1,12 +1,31 @@
 #!/bin/sh
 set -e
 
+write_output () {
+    local output="$1"
+    local truncate_if_needed="$2"
+    if [ -n "$output_to_file" ]; then
+        echo "$output" >> "$output-to-file"
+    fi
+    # github-action limits output to 1MB
+    # we count bytes because unicode has multibyte characters
+    if [ "$truncate_if_needed" = "true" ]; then
+        size=$(echo "$output" | wc -c)
+        if [ "$size" -ge "1000000" ]; then
+            echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
+            output=$(echo "$output" | head -c 1000000)
+        fi
+    fi 
+    echo "$output" >>"$GITHUB_OUTPUT"
+}
+
 readonly base="$1"
 readonly revision="$2"
 readonly format="$3"
 readonly fail_on_diff="$4"
 readonly include_path_params="$5"
 readonly exclude_elements="$6"
+readonly output_to_file="$7"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
 
@@ -34,27 +53,20 @@ echo "flags: $flags"
 # {delimiter}
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-echo "diff<<$delimiter" >>$GITHUB_OUTPUT
+write_output "diff<<$delimiter"
 
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags)
+    output=$(oasdiff diff "$base" "$revision" "$flags")
 else
     output=$(oasdiff diff "$base" "$revision")
 fi
 
 if [ -n "$output" ]; then
-    # github-action limits output to 1MB
-    # we count bytes because unicode has multibyte characters
-    size=$(echo "$output" | wc -c)
-    if [ "$size" -ge "1000000" ]; then
-        echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
-        output=$(echo "$output" | head -c $1000000)
-    fi
-    echo "$output" >>$GITHUB_OUTPUT
+    write_output "$output" "true"
 else
-    echo "No changes" >>$GITHUB_OUTPUT
+    write_output "No changes"
 fi
 
-echo "$delimiter" >>$GITHUB_OUTPUT
+write_output "$delimiter"
