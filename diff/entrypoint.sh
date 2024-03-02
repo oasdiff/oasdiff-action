@@ -58,7 +58,7 @@ write_output "diff<<$delimiter"
 set -o pipefail
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" "$flags")
+    output=$(oasdiff diff "$base" "$revision" $flags)
 else
     output=$(oasdiff diff "$base" "$revision")
 fi

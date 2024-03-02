@@ -50,7 +50,7 @@ delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 write_output "changelog<<$delimiter"
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff changelog "$base" "$revision" "$flags")
+    output=$(oasdiff changelog "$base" "$revision" $flags)
 else
     output=$(oasdiff changelog "$base" "$revision")
 fi

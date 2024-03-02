@@ -64,7 +64,7 @@ delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 write_output "breaking<<$delimiter"
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" "$flags" | head -n 1)
+    output=$(oasdiff breaking "$base" "$revision" $flags | head -n 1)
 else
     output=$(oasdiff breaking "$base" "$revision" | head -n 1)
 fi
