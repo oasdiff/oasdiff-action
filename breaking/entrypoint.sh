@@ -48,7 +48,7 @@ fi
 if [ -n "$deprecation_days_stable" ]; then
     flags="${flags} --deprecation-days-stable $deprecation_days_stable"
 fi
-if [ "$exclude_elements" != "" ]; then
+if [ -n "$exclude_elements" ]; then
     flags="${flags} --exclude-elements ${exclude_elements}"
 fi
 echo "flags: $flags"

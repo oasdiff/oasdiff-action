@@ -40,7 +40,7 @@ fi
 if [ "$include_path_params" = "true" ]; then
     flags="${flags} --include-path-params"
 fi
-if [ "$exclude_elements" != "" ]; then
+if [ -n "$exclude_elements" ]; then
     flags="${flags} --exclude-elements ${exclude_elements}"
 fi
 echo "flags: $flags"
