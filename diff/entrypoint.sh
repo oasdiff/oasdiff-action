@@ -7,7 +7,7 @@ readonly format="$3"
 readonly fail_on_diff="$4"
 readonly include_path_params="$5"
 readonly exclude_elements="$6"
-readonly composed="$9"
+readonly composed="$7"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
 

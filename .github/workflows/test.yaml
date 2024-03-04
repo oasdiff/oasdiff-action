@@ -62,8 +62,8 @@ jobs:
             ${{ steps.test_composed.outputs.diff }}
             $delimiter
             )
-            if [ "$output" != "/pets" ]; then
-              echo "Expected '/pets' to be modified in diff, instead got '$output'" >&2
+            if [[ ! "$output" =~ "Deleted Endpoints: 1" ]]; then
+              echo "Expected 'Deleted Endpoints: 1' to be modified in diff, instead got '$output'" >&2
               exit 1
             fi
   oasdiff_breaking:
@@ -102,6 +102,7 @@ jobs:
           with:
             base: 'specs/glob/base/*.yaml'
             revision: 'specs/glob/revision/*.yaml'
+            fail-on-diff: false
             format: 'text'
             composed: true
         - name: Test breaking action output
@@ -111,7 +112,7 @@ jobs:
             ${{ steps.test_breaking_composed.outputs.breaking }}
             $delimiter
             )
-            if [ "$output" != "1 breaking changes: 1 error, 0 warning" ]; then
+            if [[ ! "$output" =~ "1 breaking changes: 1 error, 0 warning" ]]; then
               echo "Expected '1 breaking changes: 1 error, 0 warning', instead got '$output'" >&2
               exit 1
             fi
@@ -177,7 +178,7 @@ jobs:
             ${{ steps.test_changelog_composed.outputs.changelog }}
             $delimiter
             )
-            if [ "$output" != "1 changes: 1 error, 0 warning, 0 info" ]; then
+            if [[ ! "$output" =~ "1 changes: 1 error, 0 warning, 0 info" ]]; then
               echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
               exit 1
             fi
