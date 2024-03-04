@@ -12,8 +12,8 @@ Copy and paste the following snippet into your build .yml file:
 - name: Running OpenAPI Spec diff action
   uses: oasdiff/oasdiff-action/diff@main
   with:
-    base: 'specs/base.yaml'
-    revision: 'specs/revision.yaml'
+    base: 'specs/base/base.yaml'
+    revision: 'specs/revision/revision.yaml'
 ```
 
 This action supports additional arguments that are converted to parameters for the `oasdiff` CLI.
@@ -24,6 +24,7 @@ This action supports additional arguments that are converted to parameters for t
 | --format | format | yaml |
 | --include-path-params | include-path-params | false |
 | --exclude-elements | exclude-elements | '' |
+| --composed                | composed                | false   |
 
 ### Check for breaking API changes, and fail if any are found
 Copy and paste the following snippet into your build .yml file:
@@ -45,6 +46,7 @@ Additional arguments:
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 | --exclude-elements        | exclude-elements        | ''      |
+| --composed                | composed                | false   |
 
 This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
 
@@ -64,3 +66,4 @@ Additional arguments:
 |--------|--------|--------|
 | --include-path-params | include-path-params | false |
 | --exclude-elements    | exclude-elements    | ''    |
+| --composed            | composed            | false   |
