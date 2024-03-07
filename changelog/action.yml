@@ -1,33 +1,33 @@
-name: "OpenAPI Spec: changelog"
-description: "Generate a changelog for OpenAPI Specification 3"
+name: 'OpenAPI Spec: changelog'
+description: 'Generate a changelog for OpenAPI Specification 3'
 inputs:
   base:
-    description: "Path of original OpenAPI spec in YAML or JSON format"
+    description: 'Path of original OpenAPI spec in YAML or JSON format'
     required: true
   revision:
-    description: "Path of revised OpenAPI spec in YAML or JSON format"
+    description: 'Path of revised OpenAPI spec in YAML or JSON format'
     required: true
   include-path-params:
-    description: "Include path parameter names in endpoint matching"
+    description: 'Include path parameter names in endpoint matching'
     required: false
-    default: "false"
+    default: 'false'
   exclude-elements:
-    description: "Exclude certain kinds of changes"
+    description: 'Exclude certain kinds of changes'
     required: false
-    default: ""
-  output-to-file:
-    description: "Output to a file at the given path"
+    default: ''
+  composed:
+    description: 'Run in composed mode'
     required: false
-    default: ""
+    default: 'false'
 outputs:
   changelog:
-    description: "Output summary of API changelog"
+    description: 'Output summary of API changelog'
 runs:
-  using: "docker"
-  image: "Dockerfile"
+  using: 'docker'
+  image: 'Dockerfile'
   args:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
-    - ${{ inputs.output-to-file }}
+    - ${{ inputs.composed }}

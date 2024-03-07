@@ -1,38 +1,38 @@
-name: "OpenAPI Spec: diff"
-description: "Generate a diff report for OpenAPI Specification 3"
+name: 'OpenAPI Spec: diff'
+description: 'Generate a diff report for OpenAPI Specification 3'
 inputs:
   base:
-    description: "Path of original OpenAPI spec in YAML or JSON format"
+    description: 'Path of original OpenAPI spec in YAML or JSON format'
     required: true
   revision:
-    description: "Path of revised OpenAPI spec in YAML or JSON format"
+    description: 'Path of revised OpenAPI spec in YAML or JSON format'
     required: true
   format:
-    description: "Output format"
+    description: 'Output format'
     required: false
-    default: "yaml"
+    default: 'yaml'
   fail-on-diff:
-    description: "Fail with exit code 1 if a difference is found"
+    description: 'Fail with exit code 1 if a difference is found'
     required: false
-    default: "false"
+    default: 'false'
   include-path-params:
-    description: "Include path parameter names in endpoint matching"
+    description: 'Include path parameter names in endpoint matching'
     required: false
-    default: "false"
+    default: 'false'
   exclude-elements:
-    description: "Exclude certain kinds of changes"
+    description: 'Exclude certain kinds of changes'
     required: false
-    default: ""
-  output-to-file:
-    description: "Output to a file at the given path"
+    default: ''
+  composed:
+    description: 'Run in composed mode'
     required: false
-    default: ""
+    default: 'false'
 outputs:
   diff:
-    description: "Output summary of API diff"
+    description: 'Output summary of API diff'
 runs:
-  using: "docker"
-  image: "Dockerfile"
+  using: 'docker'
+  image: 'Dockerfile'
   args:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
@@ -40,4 +40,4 @@ runs:
     - ${{ inputs.fail-on-diff }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
-    - ${{ inputs.output-to-file }}
+    - ${{ inputs.composed }}

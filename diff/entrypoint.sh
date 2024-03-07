@@ -1,31 +1,13 @@
 #!/bin/sh
 set -e
 
-write_output () {
-    local output="$1"
-    local truncate_if_needed="$2"
-    if [ -n "$output_to_file" ]; then
-        echo "$output" >> "$output_to_file"
-    fi
-    # github-action limits output to 1MB
-    # we count bytes because unicode has multibyte characters
-    if [ "$truncate_if_needed" = "true" ]; then
-        size=$(echo "$output" | wc -c)
-        if [ "$size" -ge "1000000" ]; then
-            echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
-            output=$(echo "$output" | head -c 1000000)
-        fi
-    fi 
-    echo "$output" >>"$GITHUB_OUTPUT"
-}
-
 readonly base="$1"
 readonly revision="$2"
 readonly format="$3"
 readonly fail_on_diff="$4"
 readonly include_path_params="$5"
 readonly exclude_elements="$6"
-readonly output_to_file="$7"
+readonly composed="$7"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
 
@@ -40,8 +22,11 @@ fi
 if [ "$include_path_params" = "true" ]; then
     flags="${flags} --include-path-params"
 fi
-if [ -n "$exclude_elements" ]; then
+if [ "$exclude_elements" != "" ]; then
     flags="${flags} --exclude-elements ${exclude_elements}"
+fi
+if [ "$composed" = "true" ]; then
+    flags="${flags} -c"
 fi
 echo "flags: $flags"
 
@@ -53,7 +38,7 @@ echo "flags: $flags"
 # {delimiter}
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-write_output "diff<<$delimiter"
+echo "diff<<$delimiter" >>$GITHUB_OUTPUT
 
 set -o pipefail
 
@@ -64,9 +49,16 @@ else
 fi
 
 if [ -n "$output" ]; then
-    write_output "$output" "true"
+    # github-action limits output to 1MB
+    # we count bytes because unicode has multibyte characters
+    size=$(echo "$output" | wc -c)
+    if [ "$size" -ge "1000000" ]; then
+        echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
+        output=$(echo "$output" | head -c $1000000)
+    fi
+    echo "$output" >>$GITHUB_OUTPUT
 else
-    write_output "No changes"
+    echo "No changes" >>$GITHUB_OUTPUT
 fi
 
-write_output "$delimiter"
+echo "$delimiter" >>$GITHUB_OUTPUT
