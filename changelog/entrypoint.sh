@@ -10,7 +10,7 @@ readonly exclude_elements="$4"
 readonly composed="$5"
 readonly output_to_file="$6"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""

@@ -12,7 +12,7 @@ readonly exclude_elements="$6"
 readonly composed="$7"
 readonly output_to_file="$8"
 
-echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
+echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""

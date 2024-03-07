@@ -14,7 +14,7 @@ readonly exclude_elements="$8"
 readonly composed="$9"
 readonly output_to_file="${10}"
 
-echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
@@ -58,7 +58,7 @@ else
 fi
 
 if [ -n "$output" ]; then
-    write_output "$(head -n 1 <<< "$output")" "$output"
+    write_output "$(echo "$output" | head -n 1)" "$output"
 else
     write_output "No breaking changes"
 fi
