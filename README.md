@@ -12,8 +12,8 @@ Copy and paste the following snippet into your build .yml file:
 - name: Running OpenAPI Spec diff action
   uses: oasdiff/oasdiff-action/diff@main
   with:
-    base: 'specs/base/base.yaml'
-    revision: 'specs/revision/revision.yaml'
+    base: 'specs/base.yaml'
+    revision: 'specs/revision.yaml'
 ```
 
 This action supports additional arguments that are converted to parameters for the `oasdiff` CLI.
