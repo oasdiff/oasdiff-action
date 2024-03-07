@@ -7,7 +7,8 @@ readonly base="$1"
 readonly revision="$2"
 readonly include_path_params="$3"
 readonly exclude_elements="$4"
-readonly output_to_file="$5"
+readonly composed="$5"
+readonly output_to_file="$6"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
 
@@ -18,6 +19,9 @@ if [ "$include_path_params" = "true" ]; then
 fi
 if [ -n "$exclude_elements" ]; then
     flags="$flags --exclude-elements $exclude_elements"
+fi
+if [ "$composed" = "true" ]; then
+    flags="$flags -c"
 fi
 echo "flags: $flags"
 

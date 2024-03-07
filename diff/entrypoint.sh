@@ -9,7 +9,8 @@ readonly format="$3"
 readonly fail_on_diff="$4"
 readonly include_path_params="$5"
 readonly exclude_elements="$6"
-readonly output_to_file="$7"
+readonly composed="$7"
+readonly output_to_file="$8"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements"
 
@@ -26,6 +27,9 @@ if [ "$include_path_params" = "true" ]; then
 fi
 if [ -n "$exclude_elements" ]; then
     flags="$flags --exclude-elements $exclude_elements"
+fi
+if [ "$composed" = "true" ]; then
+    flags="$flags -c"
 fi
 echo "flags: $flags"
 

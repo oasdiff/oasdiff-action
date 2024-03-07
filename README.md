@@ -24,6 +24,7 @@ This action supports additional arguments. Most are converted to parameters for 
 | --format              | format              | yaml    |
 | --include-path-params | include-path-params | false   |
 | --exclude-elements    | exclude-elements    | ''      |
+| --composed            | composed            | false   |
 | N/A                   | output-to-file      | ''      |
 
 ### Check for breaking API changes, and fail if any are found
@@ -46,6 +47,7 @@ Additional arguments:
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 | --exclude-elements        | exclude-elements        | ''      |
+| --composed                | composed                | false   |
 | N/A                       | output-to-file          | ''      |
 
 This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
@@ -66,4 +68,5 @@ Additional arguments:
 | --------------------- | ------------------- | ------- |
 | --include-path-params | include-path-params | false   |
 | --exclude-elements    | exclude-elements    | ''      |
+| --composed            | composed            | false   |
 | N/A                   | output-to-file      | ''      |

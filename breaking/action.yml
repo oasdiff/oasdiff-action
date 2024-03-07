@@ -28,6 +28,10 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+  composed:
+    description: 'Run in composed mode'
+    required: false
+    default: 'false'
   output-to-file:
     description: 'Output to a file at the given path'
     required: false
@@ -47,4 +51,5 @@ runs:
     - ${{ inputs.deprecation-days-beta }}
     - ${{ inputs.deprecation-days-stable }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.composed }}
     - ${{ inputs.output-to-file }}
