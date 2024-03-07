@@ -1,7 +1,11 @@
 write_output () {
     local output="$1"
     if [ -n "$output_to_file" ]; then
-        echo "$output" >> "$output_to_file"
+        local file_output="$2"
+        if [ -z "$file_output" ]; then
+            file_output=$output
+        fi
+        echo "$file_output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
