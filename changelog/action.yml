@@ -15,6 +15,10 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+  composed:
+    description: 'Run in composed mode'
+    required: false
+    default: 'false'
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -26,3 +30,4 @@ runs:
     - ${{ inputs.revision }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.composed }}
