@@ -16,15 +16,16 @@ Copy and paste the following snippet into your build .yml file:
     revision: 'specs/revision.yaml'
 ```
 
-This action supports additional arguments that are converted to parameters for the `oasdiff` CLI.
+This action supports additional arguments. Most are converted to parameters for the `oasdiff` CLI.
 
-| CLI | Action input | Default |
-|--------|--------|--------|
-| --fail-on-diff | fail-on-diff | false |
-| --format | format | yaml |
-| --include-path-params | include-path-params | false |
-| --exclude-elements | exclude-elements | '' |
-| --composed                | composed                | false   |
+| CLI                   | Action input        | Default |
+| --------------------- | ------------------- | ------- |
+| --fail-on-diff        | fail-on-diff        | false   |
+| --format              | format              | yaml    |
+| --include-path-params | include-path-params | false   |
+| --exclude-elements    | exclude-elements    | ''      |
+| --composed            | composed            | false   |
+| N/A                   | output-to-file      | ''      |
 
 ### Check for breaking API changes, and fail if any are found
 Copy and paste the following snippet into your build .yml file:
@@ -39,7 +40,7 @@ Copy and paste the following snippet into your build .yml file:
 Additional arguments:
 
 | CLI                       | Action input            | Default |
-|---------------------------|-------------------------|---------|
+| ------------------------- | ----------------------- | ------- |
 | --fail-on WARN            | fail-on-diff            | true    |
 | --include-checks          | include-checks          | csv     |
 | --include-path-params     | include-path-params     | false   |
@@ -47,6 +48,7 @@ Additional arguments:
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 | --exclude-elements        | exclude-elements        | ''      |
 | --composed                | composed                | false   |
+| N/A                       | output-to-file          | ''      |
 
 This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
 
@@ -62,8 +64,9 @@ Copy and paste the following snippet into your build .yml file:
 
 Additional arguments:
 
-| CLI | Action input | Default |
-|--------|--------|--------|
-| --include-path-params | include-path-params | false |
-| --exclude-elements    | exclude-elements    | ''    |
+| CLI                   | Action input        | Default |
+| --------------------- | ------------------- | ------- |
+| --include-path-params | include-path-params | false   |
+| --exclude-elements    | exclude-elements    | ''      |
 | --composed            | composed            | false   |
+| N/A                   | output-to-file      | ''      |

@@ -19,6 +19,10 @@ inputs:
     description: 'Run in composed mode'
     required: false
     default: 'false'
+  output-to-file:
+    description: 'Output to a file at the given path'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -31,3 +35,4 @@ runs:
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
     - ${{ inputs.composed }}
+    - ${{ inputs.output-to-file }}

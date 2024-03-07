@@ -27,6 +27,10 @@ inputs:
     description: 'Run in composed mode'
     required: false
     default: 'false'
+  output-to-file:
+    description: 'Output to a file at the given path'
+    required: false
+    default: ''
 outputs:
   diff:
     description: 'Output summary of API diff'
@@ -41,3 +45,4 @@ runs:
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
     - ${{ inputs.composed }}
+    - ${{ inputs.output-to-file }}
