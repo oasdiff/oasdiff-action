@@ -39,15 +39,14 @@ Additional arguments:
 
 | CLI                       | Action input            | Default |
 |---------------------------|-------------------------|---------|
-| --fail-on WARN            | fail-on-diff            | true    |
-| --fail-on                 | fail-on                 | ''      |
+| --fail-on                 | fail-on                 | 'ERR'      |
 | --include-checks          | include-checks          | csv     |
 | --include-path-params     | include-path-params     | false   |
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 | --exclude-elements        | exclude-elements        | ''      |
 
-This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`. Note: `fail-on-diff` takes precedence over `fail-on` when `fail-on-diff` is `true`.
+This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
 
 ### Generate a changelog
 Copy and paste the following snippet into your build .yml file:
