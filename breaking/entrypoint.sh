@@ -22,7 +22,7 @@ write_output () {
 
 readonly base="$1"
 readonly revision="$2"
-readonly fail_on_diff="$3"
+readonly fail_on="$3"
 readonly include_checks="$4"
 readonly include_path_params="$5"
 readonly deprecation_days_beta="$6"
@@ -31,12 +31,12 @@ readonly exclude_elements="$8"
 readonly composed="$9"
 readonly output_to_file="${10}"
 
-echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements"
 
 # Build flags to pass in command
 flags=""
-if [ "$fail_on_diff" = "true" ]; then
-    flags="$flags --fail-on WARN"
+if [ -z "$fail_on" ]; then
+    flags="${flags} --fail-on $fail_on"
 fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
