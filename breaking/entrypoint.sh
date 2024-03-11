@@ -65,8 +65,10 @@ else
     breaking_changes=$(oasdiff breaking "$base" "$revision")
 fi
 
+# Updating GitHub Action summary with formatted output
+flags_with_githubactions="$flags --format githubactions"
 # Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" "$flags --format githubactions"
+oasdiff breaking "$base" "$revision" $flags_with_githubactions
 
 # *** GitHub Action step output ***
 
