@@ -57,3 +57,13 @@ if [ "$composed" = "true" ]; then
     flags="$flags -c"
 fi
 echo "flags: $flags"
+
+# *** github action step output ***
+
+# output name should be in the syntax of multiple lines:
+# {name}<<{delimiter}
+# {value}
+# {delimiter}
+# see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
