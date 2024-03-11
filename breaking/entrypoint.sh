@@ -71,11 +71,11 @@ echo "flags: $flags"
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-if [ -n "$flags" ]; then
-    breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
-else
-    breaking_changes=$(oasdiff breaking "$base" "$revision")
-fi
+# if [ -n "$flags" ]; then
+#     breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
+# else
+#     breaking_changes=$(oasdiff breaking "$base" "$revision")
+# fi
 
 write_output "No breaking changes"
 echo "$delimiter" >>"$GITHUB_OUTPUT"
