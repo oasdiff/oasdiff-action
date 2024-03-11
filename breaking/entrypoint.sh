@@ -10,7 +10,7 @@ readonly deprecation_days_beta="$6"
 readonly deprecation_days_stable="$7"
 readonly exclude_elements="$8"
 readonly composed="$9"
-readonly output_to_file="$10"
+readonly output_to_file="${10}"
 
 write_output () {
     _write_output_output="$1"
