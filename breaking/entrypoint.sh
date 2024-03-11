@@ -70,5 +70,12 @@ echo "flags: $flags"
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
+
+if [ -n "$flags" ]; then
+    output=$(oasdiff breaking "$base" "$revision" $flags)
+else
+    output=$(oasdiff breaking "$base" "$revision")
+fi
+
 write_output "No breaking changes"
 echo "$delimiter" >>"$GITHUB_OUTPUT"
