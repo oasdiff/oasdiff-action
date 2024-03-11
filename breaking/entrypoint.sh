@@ -29,7 +29,7 @@ readonly deprecation_days_beta="$6"
 readonly deprecation_days_stable="$7"
 readonly exclude_elements="$8"
 readonly composed="$9"
-readonly output_to_file="${10}"
+readonly output_to_file="$10"
 
 echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
@@ -66,7 +66,12 @@ echo "flags: $flags"
 # {delimiter}
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+
+echo "***effi 1*** delimiter: $delimiter"
+
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
+
+echo "***effi 2***"
 
 if [ -n "$flags" ]; then
     output=$(oasdiff breaking "$base" "$revision" $flags)
@@ -74,17 +79,28 @@ else
     output=$(oasdiff breaking "$base" "$revision")
 fi
 
+echo "***effi 3***"
+
 if [ -n "$output" ]; then
     write_output "$(echo "$output" | head -n 1)" "$output"
 else
     write_output "No breaking changes"
 fi
 
+echo "***effi 4***"
+
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+
+echo "***effi 5***"
 
 # *** github action step output ***
 
 # Updating GitHub Action summary with formatted output
 flags="$flags --format githubactions"
+
+echo "***effi 6*** flag: $flags"
+
 # Writes the summary to log and updates GitHub Action summary
 oasdiff breaking "$base" "$revision" $flags
+
+echo "***effi 7***"

@@ -1,6 +1,5 @@
 name: 'Test oasdiff actions'
 on:
-  pull_request:
   push:
 jobs:
   oasdiff_diff:
