@@ -1,25 +1,6 @@
 #!/bin/sh
 set -e
 
-write_output () {
-    local output="$1"
-    if [ -n "$output_to_file" ]; then
-        local file_output="$2"
-        if [ -z "$file_output" ]; then
-            file_output=$output
-        fi
-        echo "$file_output" >> "$output_to_file"
-    fi
-    # github-action limits output to 1MB
-    # we count bytes because unicode has multibyte characters
-    size=$(echo "$output" | wc -c)
-    if [ "$size" -ge "1000000" ]; then
-        echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
-        output=$(echo "$output" | head -c 1000000)
-    fi
-    echo "$output" >>"$GITHUB_OUTPUT"
-}
-
 readonly base="$1"
 readonly revision="$2"
 readonly fail_on_diff="$3"
@@ -30,6 +11,26 @@ readonly deprecation_days_stable="$7"
 readonly exclude_elements="$8"
 readonly composed="$9"
 readonly output_to_file="${10}"
+
+write_output () {
+    _write_output_output="$1"
+    if [ -n "$output_to_file" ]; then
+        _write_output_file_output="$2"
+        if [ -z "$_write_output_file_output" ]; then
+            _write_output_file_output=$_write_output_output
+
+        fi
+        echo "$_write_output_file_output" >> "$output_to_file"
+    fi
+    # github-action limits output to 1MB
+    # we count bytes because unicode has multibyte characters
+    size=$(echo "$_write_output_output" | wc -c)
+    if [ "$size" -ge "1000000" ]; then
+        echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
+        _write_output_output=$(echo "$_write_output_output" | head -c 1000000)
+    fi
+    echo "$_write_output_output" >>"$GITHUB_OUTPUT"
+}
 
 echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
@@ -58,9 +59,21 @@ if [ "$composed" = "true" ]; then
 fi
 echo "flags: $flags"
 
-# *** github action step output ***
+# Check for breaking changes
+if [ -n "$flags" ]; then
+    breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
+else
+    breaking_changes=$(oasdiff breaking "$base" "$revision")
+fi
 
-# output name should be in the syntax of multiple lines:
+# Updating GitHub Action summary with formatted output
+flags_with_githubactions="$flags --format githubactions"
+# Writes the summary to log and updates GitHub Action summary
+oasdiff breaking "$base" "$revision" $flags_with_githubactions
+
+# *** GitHub Action step output ***
+
+# Output name should be in the syntax of multiple lines:
 # {name}<<{delimiter}
 # {value}
 # {delimiter}
@@ -68,23 +81,10 @@ echo "flags: $flags"
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" $flags)
-else
-    output=$(oasdiff breaking "$base" "$revision")
-fi
-
-if [ -n "$output" ]; then
-    write_output "$(echo "$output" | head -n 1)" "$output"
+if [ -n "$breaking_changes" ]; then
+    write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 else
     write_output "No breaking changes"
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
-
-# *** github action step output ***
-
-# Updating GitHub Action summary with formatted output
-flags="$flags --format githubactions"
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags
