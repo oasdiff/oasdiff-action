@@ -72,9 +72,9 @@ delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
 if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" $flags)
+    breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
 else
-    output=$(oasdiff breaking "$base" "$revision")
+    breaking_changes=$(oasdiff breaking "$base" "$revision")
 fi
 
 write_output "No breaking changes"
