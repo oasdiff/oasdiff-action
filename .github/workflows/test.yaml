@@ -116,11 +116,23 @@ jobs:
         - name: checkout
           uses: actions/checkout@v4
         - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
+          id: test_breaking_changes_matching_delimiter_not_found
           uses: ./breaking
           with:
             base: 'specs/petstore-base.yaml'
             revision: 'specs/petstore-revision.yaml'
             fail-on-diff: false
+        - name: Test breaking changes action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_breaking_changes_matching_delimiter_not_found.outputs.breaking }}
+            $delimiter
+            )
+            if [ "$output" != "9 breaking changes: 6 error, 3 warning" ]; then
+              echo "Expected output '9 breaking changes: 6 error, 3 warning' but got '$output'" >&2
+              exit 1
+            fi
   oasdiff_breaking_composed:
     runs-on: ubuntu-latest
     name: Test breaking action with composed option
