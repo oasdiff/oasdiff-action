@@ -9,6 +9,9 @@ write_output () {
             file_output=$output
         fi
         echo "$file_output" >> "$output_to_file"
+    elif [ -n "$2" ]; then
+      # if we don't have a file to write to use the full content of the file output if specified
+      output="$2"
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
