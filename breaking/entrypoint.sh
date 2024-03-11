@@ -73,34 +73,34 @@ echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
 echo "***effi 2***"
 
-if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" $flags)
-else
-    output=$(oasdiff breaking "$base" "$revision")
-fi
+# if [ -n "$flags" ]; then
+#     output=$(oasdiff breaking "$base" "$revision" $flags)
+# else
+#     output=$(oasdiff breaking "$base" "$revision")
+# fi
 
-echo "***effi 3***"
+# echo "***effi 3***"
 
-if [ -n "$output" ]; then
-    write_output "$(echo "$output" | head -n 1)" "$output"
-else
-    write_output "No breaking changes"
-fi
+# if [ -n "$output" ]; then
+#     write_output "$(echo "$output" | head -n 1)" "$output"
+# else
+#     write_output "No breaking changes"
+# fi
 
-echo "***effi 4***"
+# echo "***effi 4***"
 
-echo "$delimiter" >>"$GITHUB_OUTPUT"
+# echo "$delimiter" >>"$GITHUB_OUTPUT"
 
-echo "***effi 5***"
+# echo "***effi 5***"
 
-# *** github action step output ***
+# # *** github action step output ***
 
-# Updating GitHub Action summary with formatted output
-flags="$flags --format githubactions"
+# # Updating GitHub Action summary with formatted output
+# flags="$flags --format githubactions"
 
-echo "***effi 6*** flag: $flags"
+# echo "***effi 6*** flag: $flags"
 
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags
+# # Writes the summary to log and updates GitHub Action summary
+# oasdiff breaking "$base" "$revision" $flags
 
-echo "***effi 7***"
+# echo "***effi 7***"
