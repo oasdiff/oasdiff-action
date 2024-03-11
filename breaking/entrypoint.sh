@@ -2,7 +2,9 @@
 set -e
 
 write_output () {
+    
     local output="$1"
+    
     if [ -n "$output_to_file" ]; then
         local file_output="$2"
         if [ -z "$file_output" ]; then
@@ -10,6 +12,7 @@ write_output () {
         fi
         echo "$file_output" >> "$output_to_file"
     fi
+    
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
     size=$(echo "$output" | wc -c)
@@ -66,4 +69,6 @@ echo "flags: $flags"
 # {delimiter}
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-# echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
+echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
+write_output "No breaking changes"
+echo "$delimiter" >>"$GITHUB_OUTPUT"
