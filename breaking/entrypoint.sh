@@ -2,9 +2,7 @@
 set -e
 
 write_output () {
-    
     local output="$1"
-    
     if [ -n "$output_to_file" ]; then
         local file_output="$2"
         if [ -z "$file_output" ]; then
@@ -12,7 +10,6 @@ write_output () {
         fi
         echo "$file_output" >> "$output_to_file"
     fi
-    
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
     size=$(echo "$output" | wc -c)
@@ -61,15 +58,16 @@ if [ "$composed" = "true" ]; then
 fi
 echo "flags: $flags"
 
+# Check for breaking changes
 if [ -n "$flags" ]; then
     breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
 else
     breaking_changes=$(oasdiff breaking "$base" "$revision")
 fi
 
-# *** github action step output ***
+# *** GitHub Action step output ***
 
-# output name should be in the syntax of multiple lines:
+# Output name should be in the syntax of multiple lines:
 # {name}<<{delimiter}
 # {value}
 # {delimiter}
@@ -77,5 +75,17 @@ fi
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-write_output "No breaking changes"
+if [ -n "$breaking_changes" ]; then
+    write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
+else
+    write_output "No breaking changes"
+fi
+
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+
+# *** END GitHub Action step output ***
+
+# Updating GitHub Action summary with formatted output
+flags="$flags --format githubactions"
+# Writes the summary to log and updates GitHub Action summary
+oasdiff breaking "$base" "$revision" $flags
