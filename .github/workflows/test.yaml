@@ -9,7 +9,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: Checking OpenAPI Spec changes
-        uses: oasdiff/oasdiff-action/breaking@v0.0.18
+        uses: ./breaking
         with:
           base: 'specs/petstore-base.yaml'
           revision: 'specs/petstore-revision.yaml'
