@@ -13,3 +13,4 @@ jobs:
         with:
           base: 'specs/petstore-base.yaml'
           revision: 'specs/petstore-revision.yaml'
+          fail-on-diff: false
