@@ -11,7 +11,7 @@ jobs:
           uses: actions/checkout@v4
         - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
           id: test_breaking_changes_matching_delimiter_not_found
-          uses: oasdiff/oasdiff-action/breaking@v0.0.16
+          uses: ./breaking
           with:
             base: 'specs/petstore-base.yaml'
             revision: 'specs/petstore-revision.yaml'

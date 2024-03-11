@@ -65,6 +65,9 @@ else
     breaking_changes=$(oasdiff breaking "$base" "$revision")
 fi
 
+# Writes the summary to log and updates GitHub Action summary
+oasdiff breaking "$base" "$revision" "$flags --format githubactions"
+
 # *** GitHub Action step output ***
 
 # Output name should be in the syntax of multiple lines:
@@ -82,10 +85,3 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
-
-# *** END GitHub Action step output ***
-
-# Updating GitHub Action summary with formatted output
-flags="$flags --format githubactions"
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags
