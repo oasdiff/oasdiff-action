@@ -66,4 +66,4 @@ echo "flags: $flags"
 # {delimiter}
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
+# echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
