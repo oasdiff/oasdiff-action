@@ -71,11 +71,13 @@ echo "flags: $flags"
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
+set +e # don't exit on error running oasdiff can return non-zero exit code, but we just want to capture the output
 if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" $flags)
+    output="$(oasdiff breaking "$base" "$revision" $flags)"
 else
-    output=$(oasdiff breaking "$base" "$revision")
+    output="$(oasdiff breaking "$base" "$revision")"
 fi
+set -e # exit on error again
 
 if [ -n "$output" ]; then
     write_output "$(echo "$output" | head -n 1)" "$output"
