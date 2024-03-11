@@ -57,34 +57,3 @@ if [ "$composed" = "true" ]; then
     flags="$flags -c"
 fi
 echo "flags: $flags"
-
-# *** github action step output ***
-
-# output name should be in the syntax of multiple lines:
-# {name}<<{delimiter}
-# {value}
-# {delimiter}
-# see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
-delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
-
-if [ -n "$flags" ]; then
-    output=$(oasdiff breaking "$base" "$revision" $flags)
-else
-    output=$(oasdiff breaking "$base" "$revision")
-fi
-
-if [ -n "$output" ]; then
-    write_output "$(echo "$output" | head -n 1)" "$output"
-else
-    write_output "No breaking changes"
-fi
-
-echo "$delimiter" >>"$GITHUB_OUTPUT"
-
-# *** github action step output ***
-
-# Updating GitHub Action summary with formatted output
-flags="$flags --format githubactions"
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags
