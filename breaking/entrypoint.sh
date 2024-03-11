@@ -61,6 +61,12 @@ if [ "$composed" = "true" ]; then
 fi
 echo "flags: $flags"
 
+if [ -n "$flags" ]; then
+    breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
+else
+    breaking_changes=$(oasdiff breaking "$base" "$revision")
+fi
+
 # *** github action step output ***
 
 # output name should be in the syntax of multiple lines:
@@ -70,12 +76,6 @@ echo "flags: $flags"
 # see: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
-
-# if [ -n "$flags" ]; then
-#     breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
-# else
-#     breaking_changes=$(oasdiff breaking "$base" "$revision")
-# fi
 
 write_output "No breaking changes"
 echo "$delimiter" >>"$GITHUB_OUTPUT"
