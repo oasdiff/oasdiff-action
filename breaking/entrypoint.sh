@@ -36,9 +36,6 @@ echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff
 
 # Build flags to pass in command
 flags=""
-if [ "$fail_on_diff" = "true" ]; then
-    flags="$flags --fail-on WARN"
-fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
@@ -88,3 +85,7 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+
+if [ "$fail_on_diff" = "true" -a -n "$breaking_changes" ]; then
+    exit 1
+fi
