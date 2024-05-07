@@ -89,5 +89,5 @@ echo "$delimiter" >>"$GITHUB_OUTPUT"
 # First output the changes (above) and then run oasdiff to check --fail-on
 if [ -n "$fail_on" ]; then
     flags="$flags --fail-on $fail_on"
-    oasdiff breaking "$base" "$revision" > /dev/null
+    oasdiff breaking "$base" "$revision" "$flags" > /dev/null
 fi
