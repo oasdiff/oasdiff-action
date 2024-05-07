@@ -16,4 +16,4 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking-warn.yaml'
           output-to-file: 'breaking.txt'
-          fail-on: 'WARN'
+          fail-on: 'ERR'
