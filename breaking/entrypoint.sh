@@ -3,7 +3,7 @@ set -e
 
 readonly base="$1"
 readonly revision="$2"
-readonly fail_on_diff="$3"
+readonly fail_on="$3"
 readonly include_checks="$4"
 readonly include_path_params="$5"
 readonly deprecation_days_beta="$6"
@@ -32,13 +32,10 @@ write_output () {
     echo "$_write_output_output" >>"$GITHUB_OUTPUT"
 }
 
-echo "running oasdiff breaking... base: $base, revision: $revision, fail_on_diff: $fail_on_diff, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
-if [ "$fail_on_diff" = "true" ]; then
-    flags="$flags --fail-on WARN"
-fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
@@ -88,3 +85,9 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+
+# First output the changes (above) and then run oasdiff to check --fail-on
+if [ -n "$fail_on" ]; then
+    flags="$flags --fail-on $fail_on"
+    oasdiff breaking "$base" "$revision" > /dev/null
+fi
