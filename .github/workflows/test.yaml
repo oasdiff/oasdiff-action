@@ -14,7 +14,7 @@ jobs:
         uses: ./breaking
         with:
           base: 'specs/base.yaml'
-          revision: 'specs/revision-breaking-warn.yaml'
+          revision: 'specs/revision-breaking.yaml'
           output-to-file: 'breaking.txt'
           fail-on: 'WARN'
       - name: Test breaking changes action output
