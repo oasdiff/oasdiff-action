@@ -41,7 +41,7 @@ Additional arguments:
 
 | CLI                       | Action input            | Default |
 | ------------------------- | ----------------------- | ------- |
-| --fail-on WARN            | fail-on-diff            | true    |
+| --fail-on                 | fail-on                 | empty   |
 | --include-checks          | include-checks          | csv     |
 | --include-path-params     | include-path-params     | false   |
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |

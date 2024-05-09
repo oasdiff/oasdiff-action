@@ -109,6 +109,42 @@ jobs:
             echo "Expected output '1 breaking changes: 1 error, 0 warning' but got '${output}'" >&2
             exit 1
           fi
+  oasdiff_breaking_fail_on:
+    runs-on: ubuntu-latest
+    name: Test fail on breaking changes
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running breaking action
+        id: test_breaking_changes
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking-warn.yaml'
+          output-to-file: 'breaking.txt'
+          fail-on: 'ERR'
+      - name: Test breaking changes action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "2 breaking changes: 0 error, 2 warning" ]; then
+            echo "Expected output '2 breaking changes: 0 error, 2 warning' but got '$output'" >&2
+            exit 1
+          fi
+      - name: Test breaking changes action output to file
+        run: |
+          if [ ! -s breaking.txt ]; then
+            echo "Breaking changes file doesn't exist or is empty"
+            exit 1
+          fi
+          output=$(cat breaking.txt | head -n 1)
+          if [[  "${output}" != "2 breaking changes: 0 error, 2 warning" ]]; then
+            echo "Expected output '2 breaking changes: 0 error, 2 warning' but got '${output}'" >&2
+            exit 1
+          fi
   oasdiff_breaking_matching_delimiter_not_found:
       runs-on: ubuntu-latest
       name: Test breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
@@ -237,3 +273,4 @@ jobs:
               echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
               exit 1
             fi
+
