@@ -3,6 +3,112 @@ on:
   pull_request:
   push:
 jobs:
+  oasdiff_diff:
+    runs-on: ubuntu-latest
+    name: Test diff action
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running diff action
+        id: test_ete
+        uses: ./diff
+        with:
+          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          format: 'text'
+          output-to-file: 'diff.txt'
+      - name: Test diff action output to file
+        run: |
+          if [ ! -s diff.txt ]; then
+            echo "Diff file doesn't exist or is empty"
+            exit 1
+          fi
+  oasdiff_diff_exclude_elements:
+    runs-on: ubuntu-latest
+    name: Test diff action with exclude-elements option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v4
+        - name: Running diff action with exclude-elements option
+          id: test_exclude_elements
+          uses: ./diff
+          with:
+            base: 'specs/base.yaml'
+            revision: 'specs/base-exclude-elements.yaml'
+            format: 'text'
+            exclude-elements: 'description,title,summary'
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_exclude_elements.outputs.diff }}
+            $delimiter
+            )
+            if [ "$output" != "No changes" ]; then
+              echo "Expected output 'No changes' but got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_diff_composed:
+    runs-on: ubuntu-latest
+    name: Test diff action with composed option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v4
+        - name: Running diff action with composed option
+          id: test_composed
+          uses: ./diff
+          with:
+            base: 'specs/glob/base/*.yaml'
+            revision: 'specs/glob/revision/*.yaml'
+            format: 'text'
+            composed: true
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_composed.outputs.diff }}
+            $delimiter
+            )
+            if [[ ! "$output" =~ "Deleted Endpoints: 1" ]]; then
+              echo "Expected 'Deleted Endpoints: 1' to be modified in diff, instead got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_breaking:
+    runs-on: ubuntu-latest
+    name: Test breaking changes
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running breaking action
+        id: test_breaking_changes
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          fail-on-diff: false
+          output-to-file: 'breaking.txt'
+      - name: Test breaking changes action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "1 breaking changes: 1 error, 0 warning" ]; then
+            echo "Expected output '1 breaking changes: 1 error, 0 warning' but got '$output'" >&2
+            exit 1
+          fi
+      - name: Test breaking changes action output to file
+        run: |
+          if [ ! -s breaking.txt ]; then
+            echo "Breaking changes file doesn't exist or is empty"
+            exit 1
+          fi
+          output=$(cat breaking.txt | head -n 1)
+          if [[  "${output}" != "1 breaking changes: 1 error, 0 warning" ]]; then
+            echo "Expected output '1 breaking changes: 1 error, 0 warning' but got '${output}'" >&2
+            exit 1
+          fi
   oasdiff_breaking_fail_on:
     runs-on: ubuntu-latest
     name: Test fail on breaking changes
@@ -16,7 +122,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking-warn.yaml'
           output-to-file: 'breaking.txt'
-          fail-on: 'WARN'
+          fail-on: 'ERR'
       - name: Test breaking changes action output
         run: |
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
@@ -39,3 +145,132 @@ jobs:
             echo "Expected output '2 breaking changes: 0 error, 2 warning' but got '${output}'" >&2
             exit 1
           fi
+  oasdiff_breaking_matching_delimiter_not_found:
+      runs-on: ubuntu-latest
+      name: Test breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
+      steps:
+        - name: checkout
+          uses: actions/checkout@v4
+        - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
+          id: test_breaking_changes_matching_delimiter_not_found
+          uses: ./breaking
+          with:
+            base: 'specs/petstore-base.yaml'
+            revision: 'specs/petstore-revision.yaml'
+            fail-on-diff: false
+        - name: Test breaking changes action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_breaking_changes_matching_delimiter_not_found.outputs.breaking }}
+            $delimiter
+            )
+            if [ "$output" != "9 breaking changes: 6 error, 3 warning" ]; then
+              echo "Expected output '9 breaking changes: 6 error, 3 warning' but got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_breaking_composed:
+    runs-on: ubuntu-latest
+    name: Test breaking action with composed option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v4
+        - name: Running breaking action with composed option
+          id: test_breaking_composed
+          uses: ./breaking
+          with:
+            base: 'specs/glob/base/*.yaml'
+            revision: 'specs/glob/revision/*.yaml'
+            fail-on-diff: false
+            format: 'text'
+            composed: true
+        - name: Test breaking action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_breaking_composed.outputs.breaking }}
+            $delimiter
+            )
+            if [[ ! "$output" =~ "1 breaking changes: 1 error, 0 warning" ]]; then
+              echo "Expected '1 breaking changes: 1 error, 0 warning', instead got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_breaking_deprecation:
+    runs-on: ubuntu-latest
+    name: Test breaking changes with deprecation
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Set date for deprecated specs
+        run: |
+          # Deprecate Beta in 14 days
+          sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+          # Deprecate Stable in 21 days
+          sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+      - name: Running OpenAPI Spec check breaking action
+        id: test_breaking_deprecations
+        uses: ./breaking
+        with:
+          base: specs/base.yaml
+          revision: specs/base-deprecation.yaml
+          fail-on-diff: true
+          deprecation-days-beta: 14
+          deprecation-days-stable: 21
+  oasdiff_changelog:
+    runs-on: ubuntu-latest
+    name: Test generation of changelog
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running changelog action
+        id: test_changelog
+        uses: ./changelog
+        with:
+          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          output-to-file: "changelog.txt"
+      - name: Test changelog action output
+        run: |
+          readonly expected_output="20 changes: 2 error, 4 warning, 14 info"
+          output=$(echo "${{steps.test_changelog.outputs.changelog}}" | head -n 1)
+          if [[  "${output}" != "${expected_output}" ]]; then
+            echo "Expected output '20 changes: 2 error, 4 warning, 14 info' but got '${output}'" >&2
+            exit 1
+          fi
+      - name: Test changelog action output to file
+        run: |
+          if [ ! -s changelog.txt ]; then
+            echo "Changelog file doesn't exist or is empty"
+            exit 1
+          fi
+          output=$(cat changelog.txt | head -n 1)
+          if [[  "${output}" != "20 changes: 2 error, 4 warning, 14 info" ]]; then
+            echo "Expected output '20 changes: 2 error, 4 warning, 14 info' but got '${output}'" >&2
+            exit 1
+          fi
+  oasdiff_changelog_composed:
+    runs-on: ubuntu-latest
+    name: Test changelog action with composed option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v4
+        - name: Running changelog action with composed option
+          id: test_changelog_composed
+          uses: ./changelog
+          with:
+            base: 'specs/glob/base/*.yaml'
+            revision: 'specs/glob/revision/*.yaml'
+            format: 'text'
+            composed: true
+        - name: Test changelog action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_changelog_composed.outputs.changelog }}
+            $delimiter
+            )
+            if [[ ! "$output" =~ "1 changes: 1 error, 0 warning, 0 info" ]]; then
+              echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
+              exit 1
+            fi
+
