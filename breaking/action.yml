@@ -36,6 +36,10 @@ inputs:
     description: 'Output to a file at the given path'
     required: false
     default: ''
+  max-circular-dep:
+    description: 'Maximum allowed number of circular dependencies between objects in OpenAPI specs'
+    required: false
+    default: ''
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
@@ -53,3 +57,4 @@ runs:
     - ${{ inputs.exclude-elements }}
     - ${{ inputs.composed }}
     - ${{ inputs.output-to-file }}
+    - ${{ inputs.max-circular-dep }}

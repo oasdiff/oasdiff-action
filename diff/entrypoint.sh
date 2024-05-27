@@ -28,8 +28,9 @@ readonly include_path_params="$5"
 readonly exclude_elements="$6"
 readonly composed="$7"
 readonly output_to_file="$8"
+readonly max_circular_dep="$9"
 
-echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file", max_circular_dep: $max_circular_dep
 
 # Build flags to pass in command
 flags=""
@@ -44,6 +45,9 @@ if [ "$include_path_params" = "true" ]; then
 fi
 if [ -n "$exclude_elements" ]; then
     flags="$flags --exclude-elements $exclude_elements"
+fi
+if [ -n "$max_circular_dep" ]; then
+    flags="$flags --max-circular-dep $max_circular_dep"
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
