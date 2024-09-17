@@ -7,6 +7,10 @@ inputs:
   revision:
     description: 'Path of revised OpenAPI spec in YAML or JSON format'
     required: true
+  format:
+    description: 'Output format'
+    required: false
+    default: 'yaml'
   include-path-params:
     description: 'Include path parameter names in endpoint matching'
     required: false
@@ -32,6 +36,7 @@ runs:
   args:
     - ${{ inputs.base }}
     - ${{ inputs.revision }}
+    - ${{ inputs.format }}
     - ${{ inputs.include-path-params }}
     - ${{ inputs.exclude-elements }}
     - ${{ inputs.composed }}

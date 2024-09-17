@@ -22,15 +22,19 @@ write_output () {
 
 readonly base="$1"
 readonly revision="$2"
-readonly include_path_params="$3"
-readonly exclude_elements="$4"
-readonly composed="$5"
-readonly output_to_file="$6"
+readonly format="$3"
+readonly include_path_params="$4"
+readonly exclude_elements="$5"
+readonly composed="$6"
+readonly output_to_file="$7"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
+if [ "$format" != "yaml" ]; then
+    flags="$flags --format $format"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
