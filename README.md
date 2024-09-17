@@ -66,6 +66,7 @@ Additional arguments:
 
 | CLI                   | Action input        | Default |
 | --------------------- | ------------------- | ------- |
+| --format              | format              | yaml    |
 | --include-path-params | include-path-params | false   |
 | --exclude-elements    | exclude-elements    | ''      |
 | --composed            | composed            | false   |
