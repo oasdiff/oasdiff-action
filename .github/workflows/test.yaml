@@ -125,7 +125,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking-warn.yaml'
           output-to-file: 'breaking.txt'
-          fail-on: 'ERR'
+          fail-on: 'WRN'
       - name: Test breaking changes action output
         run: |
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
