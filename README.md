@@ -24,6 +24,7 @@ This action supports additional arguments. Most are converted to parameters for 
 | --format              | format              | yaml    |
 | --include-path-params | include-path-params | false   |
 | --exclude-elements    | exclude-elements    | ''      |
+| --filter-extension    | filter-extension    | ''      |
 | --composed            | composed            | false   |
 | N/A                   | output-to-file      | ''      |
 
@@ -47,6 +48,7 @@ Additional arguments:
 | --deprecation-days-beta   | deprecation-days-beta   | 31      |
 | --deprecation-days-stable | deprecation-days-stable | 180     |
 | --exclude-elements        | exclude-elements        | ''      |
+| --filter-extension        | filter-extension        | ''      |
 | --composed                | composed                | false   |
 | N/A                       | output-to-file          | ''      |
 
@@ -68,5 +70,6 @@ Additional arguments:
 | --------------------- | ------------------- | ------- |
 | --include-path-params | include-path-params | false   |
 | --exclude-elements    | exclude-elements    | ''      |
+| --filter-extension    | filter-extension    | ''      |
 | --composed            | composed            | false   |
 | N/A                   | output-to-file      | ''      |

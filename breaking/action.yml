@@ -28,6 +28,10 @@ inputs:
     description: 'Exclude certain kinds of changes'
     required: false
     default: ''
+  filter-extension:
+    description: 'Exclude paths and operations with an OpenAPI Extension matching the given regular expression'
+    required: false
+    default: ''
   composed:
     description: 'Run in composed mode'
     required: false
@@ -51,5 +55,6 @@ runs:
     - ${{ inputs.deprecation-days-beta }}
     - ${{ inputs.deprecation-days-stable }}
     - ${{ inputs.exclude-elements }}
+    - ${{ inputs.filter-extension }}
     - ${{ inputs.composed }}
     - ${{ inputs.output-to-file }}

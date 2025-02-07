@@ -24,10 +24,11 @@ readonly base="$1"
 readonly revision="$2"
 readonly include_path_params="$3"
 readonly exclude_elements="$4"
-readonly composed="$5"
-readonly output_to_file="$6"
+readonly filter_extension="$5"
+readonly composed="$6"
+readonly output_to_file="$7"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
@@ -36,6 +37,9 @@ if [ "$include_path_params" = "true" ]; then
 fi
 if [ -n "$exclude_elements" ]; then
     flags="$flags --exclude-elements $exclude_elements"
+fi
+if [ -n "$filter_extension" ]; then
+    flags="$flags --filter-extension $filter_extension"
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
