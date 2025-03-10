@@ -1,7 +1,7 @@
 # oasdiff-action
 [![CI](https://github.com/oasdiff/oasdiff-action/actions/workflows/test.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions)
 
-GitHub actions for comparing OpenAPI specs and detect breaking changes, based on [oasdiff](https://github.com/Tufin/oasdiff) tool
+GitHub actions for comparing OpenAPI specs and detect breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff) tool
 
 ## How to use?
 Depending on your use case, refer below for instructions on generating reports for differences, breaking changes and changelog.
@@ -33,8 +33,8 @@ Copy and paste the following snippet into your build .yml file:
 - name: Running OpenAPI Spec diff action
   uses: oasdiff/oasdiff-action/breaking@main
   with:
-    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+    base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+    revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
 ```
 
 Additional arguments:
@@ -58,8 +58,8 @@ Copy and paste the following snippet into your build .yml file:
 - name: Running OpenAPI Spec diff action
   uses: oasdiff/oasdiff-action/changelog@main
   with:
-    base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-    revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+    base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+    revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
 ```
 
 Additional arguments:

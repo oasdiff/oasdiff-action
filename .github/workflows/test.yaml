@@ -13,8 +13,8 @@ jobs:
         id: test_ete
         uses: ./diff
         with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
           format: 'text'
           output-to-file: 'diff.txt'
       - name: Test diff action output to file
@@ -231,8 +231,8 @@ jobs:
         id: test_changelog
         uses: ./changelog
         with:
-          base: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test1.yaml
-          revision: https://raw.githubusercontent.com/Tufin/oasdiff/main/data/openapi-test3.yaml
+          base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
           output-to-file: "changelog.txt"
       - name: Test changelog action output
         run: |
@@ -276,4 +276,3 @@ jobs:
               echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
               exit 1
             fi
-
