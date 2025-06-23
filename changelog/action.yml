@@ -23,6 +23,22 @@ inputs:
     description: 'Output to a file at the given path'
     required: false
     default: ''
+  prefix-base:
+    description: 'Prefix for base version'
+    required: false
+    default: ''
+  prefix-revision:
+    description: 'Prefix for revision version'
+    required: false
+    default: ''
+  case-insensitive-headers:
+    description: 'Case insensitive headers'
+    required: false
+    default: 'false'
+  format:
+    description: 'Output format'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -36,3 +52,7 @@ runs:
     - ${{ inputs.exclude-elements }}
     - ${{ inputs.composed }}
     - ${{ inputs.output-to-file }}
+    - ${{ inputs.prefix-base }}
+    - ${{ inputs.prefix-revision }}
+    - ${{ inputs.case-insensitive-headers }}
+    - ${{ inputs.format }}

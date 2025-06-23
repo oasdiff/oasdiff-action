@@ -26,6 +26,10 @@ readonly include_path_params="$3"
 readonly exclude_elements="$4"
 readonly composed="$5"
 readonly output_to_file="$6"
+readonly prefix_base="$7"
+readonly prefix_revision="$8"
+readonly case_insensitive_headers="$9"
+readonly format="$10"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
@@ -39,6 +43,18 @@ if [ -n "$exclude_elements" ]; then
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
+fi
+if [ -n "$prefix_base" ]; then
+    flags="$flags --prefix-base $prefix_base"
+fi
+if [ -n "$prefix_revision" ]; then
+    flags="$flags --prefix-revision $prefix_revision"
+fi
+if [ "$case_insensitive_headers" = "true" ]; then
+    flags="$flags --case-insensitive-headers"
+fi
+if [ -n "$format" ]; then
+    flags="$flags --format $format"
 fi
 echo "flags: $flags"
 
