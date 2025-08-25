@@ -29,7 +29,7 @@ readonly output_to_file="$6"
 readonly prefix_base="$7"
 readonly prefix_revision="$8"
 readonly case_insensitive_headers="$9"
-readonly format="$10"
+readonly format="${10}"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
 
