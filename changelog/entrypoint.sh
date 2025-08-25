@@ -8,6 +8,8 @@ write_output () {
         if [ -z "$file_output" ]; then
             file_output=$output
         fi
+        # Create directory if it doesn't exist
+        mkdir -p "$(dirname "$output_to_file")"
         echo "$file_output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
