@@ -19,6 +19,8 @@ write_output () {
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
         output=$(echo "$output" | head -c 1000000)
     fi
+    # Ensure proper permissions for the output file
+    chmod 644 "$output_to_file"
     echo "$output" >>"$GITHUB_OUTPUT"
 }
 
