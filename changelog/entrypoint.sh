@@ -8,8 +8,6 @@ write_output () {
         if [ -z "$file_output" ]; then
             file_output=$output
         fi
-        # Create directory if it doesn't exist
-        mkdir -p "$(dirname "$output_to_file")"
         echo "$file_output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
@@ -19,8 +17,6 @@ write_output () {
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
         output=$(echo "$output" | head -c 1000000)
     fi
-    # Ensure proper permissions for the output file
-    chmod 644 "$output_to_file"
     echo "$output" >>"$GITHUB_OUTPUT"
 }
 
