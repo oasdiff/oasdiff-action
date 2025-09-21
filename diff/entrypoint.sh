@@ -71,9 +71,9 @@ else
 fi
 
 if [ -n "$output" ]; then
-    write_output "$output" >>"$GITHUB_OUTPUT"
+    write_output "$output" 
 else
-    write_output "No changes" >>"$GITHUB_OUTPUT"
+    write_output "No changes"
 fi
 
 # Always close the multiline output format properly
