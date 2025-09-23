@@ -62,16 +62,22 @@ echo "diff<<$delimiter" >>"$GITHUB_OUTPUT"
 
 set -o pipefail
 
+# Capture the exit code from oasdiff command while still getting the output
+exit_code=0
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags)
+    output=$(oasdiff diff "$base" "$revision" $flags) || exit_code=$?
 else
-    output=$(oasdiff diff "$base" "$revision")
+    output=$(oasdiff diff "$base" "$revision") || exit_code=$?
 fi
 
 if [ -n "$output" ]; then
-    write_output "$output"
+    write_output "$output" 
 else
     write_output "No changes"
 fi
 
+# Always close the multiline output format properly
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+
+# Exit with the original exit code from oasdiff
+exit $exit_code
