@@ -64,9 +64,13 @@ Copy and paste the following snippet into your build .yml file:
 
 Additional arguments:
 
-| CLI                   | Action input        | Default |
-| --------------------- | ------------------- | ------- |
-| --include-path-params | include-path-params | false   |
-| --exclude-elements    | exclude-elements    | ''      |
-| --composed            | composed            | false   |
-| N/A                   | output-to-file      | ''      |
+| CLI                       | Action input            | Default |
+| ----------------------| ----------------------- | ------- |
+| --include-path-params     | include-path-params     | false   |
+| --exclude-elements        | exclude-elements        | ''      |
+| --composed                | composed                | false   |
+| --prefix-base             | prefix-base             | ''      |
+| --prefix-revision         | prefix-revision         | ''      |
+| --case-insensitive-headers| case-insensitive-headers| false   |
+| --format                  | format                  | ''      |
+| N/A                       | output-to-file          | ''      |
