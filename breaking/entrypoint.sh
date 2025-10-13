@@ -9,8 +9,9 @@ readonly include_path_params="$5"
 readonly deprecation_days_beta="$6"
 readonly deprecation_days_stable="$7"
 readonly exclude_elements="$8"
-readonly composed="$9"
-readonly output_to_file="${10}"
+readonly filter_extension="$9"
+readonly composed="${10}"
+readonly output_to_file="${11}"
 
 write_output () {
     _write_output_output="$1"
@@ -32,7 +33,7 @@ write_output () {
     echo "$_write_output_output" >>"$GITHUB_OUTPUT"
 }
 
-echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
@@ -50,6 +51,9 @@ if [ -n "$deprecation_days_stable" ]; then
 fi
 if [ -n "$exclude_elements" ]; then
     flags="$flags --exclude-elements $exclude_elements"
+fi
+if [ -n "$filter_extension" ]; then
+    flags="$flags --filter-extension $filter_extension"
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
