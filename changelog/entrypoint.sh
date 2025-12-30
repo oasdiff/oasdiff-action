@@ -26,13 +26,14 @@ readonly include_path_params="$3"
 readonly exclude_elements="$4"
 readonly filter_extension="$5"
 readonly composed="$6"
-readonly output_to_file="$7"
-readonly prefix_base="$8"
-readonly prefix_revision="$9"
-readonly case_insensitive_headers="${10}"
-readonly format="${11}"
+readonly flatten_allof="$7"
+readonly output_to_file="$8"
+readonly prefix_base="$9"
+readonly prefix_revision="${10}"
+readonly case_insensitive_headers="${11}"
+readonly format="${12}"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format"
 
 # Build flags to pass in command
 flags=""
@@ -47,6 +48,9 @@ if [ -n "$filter_extension" ]; then
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
+fi
+if [ "$flatten_allof" = "true" ]; then
+    flags="$flags --flatten-allof"
 fi
 if [ -n "$prefix_base" ]; then
     flags="$flags --prefix-base $prefix_base"

@@ -26,6 +26,7 @@ This action supports additional arguments. Most are converted to parameters for 
 | --exclude-elements    | exclude-elements    | ''      |
 | --filter-extension    | filter-extension    | ''      |
 | --composed            | composed            | false   |
+| --flatten-allof       | flatten-allof       | false   |
 | N/A                   | output-to-file      | ''      |
 
 ### Check for breaking API changes, and fail if any are found
@@ -50,6 +51,7 @@ Additional arguments:
 | --exclude-elements        | exclude-elements        | ''      |
 | --filter-extension        | filter-extension        | ''      |
 | --composed                | composed                | false   |
+| --flatten-allof           | flatten-allof           | false   |
 | N/A                       | output-to-file          | ''      |
 
 This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
@@ -72,6 +74,7 @@ Additional arguments:
 | --exclude-elements         | exclude-elements         | ''      |
 | --filter-extension         | filter-extension         | ''      |
 | --composed                 | composed                 | false   |
+| --flatten-allof            | flatten-allof            | false   |
 | --prefix-base              | prefix-base              | ''      |
 | --prefix-revision          | prefix-revision          | ''      |
 | --case-insensitive-headers | case-insensitive-headers | false   |

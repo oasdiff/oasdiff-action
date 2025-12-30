@@ -28,9 +28,10 @@ readonly include_path_params="$5"
 readonly exclude_elements="$6"
 readonly filter_extension="$7"
 readonly composed="$8"
-readonly output_to_file="$9"
+readonly flatten_allof="$9"
+readonly output_to_file="${10}"
 
-echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file"
+echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
@@ -51,6 +52,9 @@ if [ -n "$filter_extension" ]; then
 fi
 if [ "$composed" = "true" ]; then
     flags="$flags -c"
+fi
+if [ "$flatten_allof" = "true" ]; then
+    flags="$flags --flatten-allof"
 fi
 echo "flags: $flags"
 
