@@ -28,6 +28,8 @@ This action supports additional arguments. Most are converted to parameters for 
 | --composed            | composed            | false   |
 | N/A                   | output-to-file      | ''      |
 
+This action delivers a summary, accessible as a GitHub step output named diff.
+
 ### Check for breaking API changes, and fail if any are found
 Copy and paste the following snippet into your build .yml file:
 ```
