@@ -76,4 +76,5 @@ Additional arguments:
 | --prefix-revision          | prefix-revision          | ''      |
 | --case-insensitive-headers | case-insensitive-headers | false   |
 | --format                   | format                   | ''      |
+| --template                 | template                 | ''      |
 | N/A                        | output-to-file           | ''      |
