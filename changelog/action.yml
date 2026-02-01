@@ -43,6 +43,10 @@ inputs:
     description: 'Output format'
     required: false
     default: ''
+  template:
+    description: 'Template for changelog'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -61,3 +65,4 @@ runs:
     - ${{ inputs.prefix-revision }}
     - ${{ inputs.case-insensitive-headers }}
     - ${{ inputs.format }}
+    - ${{ inputs.template }}

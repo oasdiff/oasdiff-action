@@ -31,8 +31,9 @@ readonly prefix_base="$8"
 readonly prefix_revision="$9"
 readonly case_insensitive_headers="${10}"
 readonly format="${11}"
+readonly template="${12}"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template"
 
 # Build flags to pass in command
 flags=""
@@ -59,6 +60,9 @@ if [ "$case_insensitive_headers" = "true" ]; then
 fi
 if [ -n "$format" ]; then
     flags="$flags --format $format"
+fi
+if [ -n "$template" ]; then
+    flags="$flags --template $template"
 fi
 echo "flags: $flags"
 
