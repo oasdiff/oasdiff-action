@@ -77,4 +77,5 @@ Additional arguments:
 | --case-insensitive-headers | case-insensitive-headers | false   |
 | --format                   | format                   | ''      |
 | --template                 | template                 | ''      |
+| --level                    | level                    | ''      |
 | N/A                        | output-to-file           | ''      |

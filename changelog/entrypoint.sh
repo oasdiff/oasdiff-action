@@ -33,7 +33,7 @@ readonly case_insensitive_headers="${10}"
 readonly format="${11}"
 readonly template="${12}"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
 # Build flags to pass in command
 flags=""
@@ -63,7 +63,11 @@ if [ -n "$format" ]; then
 fi
 if [ -n "$template" ]; then
     flags="$flags --template $template"
+f
+if [ -n "$level" ]; then
+    flags="$flags --level $level"
 fi
+ei
 echo "flags: $flags"
 
 set -o pipefail
