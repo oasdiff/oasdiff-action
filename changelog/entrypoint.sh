@@ -67,7 +67,6 @@ fi
 if [ -n "$level" ]; then
     flags="$flags --level $level"
 fi
-
 echo "flags: $flags"
 
 set -o pipefail
