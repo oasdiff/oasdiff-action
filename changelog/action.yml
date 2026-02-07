@@ -48,7 +48,7 @@ inputs:
     required: false
     default: ''
   level:
-    description: 'Output level'
+    description: 'Output level: INFO (default), WARN, or ERR'
     required: false
     default: ''
 outputs:

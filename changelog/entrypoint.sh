@@ -32,6 +32,7 @@ readonly prefix_revision="$9"
 readonly case_insensitive_headers="${10}"
 readonly format="${11}"
 readonly template="${12}"
+readonly level="${13}"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
