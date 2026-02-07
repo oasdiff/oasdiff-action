@@ -71,3 +71,4 @@ runs:
     - ${{ inputs.format }}
     - ${{ inputs.template }}
     - ${{ inputs.level }}
+
