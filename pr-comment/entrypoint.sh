@@ -31,12 +31,12 @@ else
 fi
 
 # If no changes, use empty array
-if [ -z "$changelog" ] || [ "$changelog" = "null" ]; then
-    changelog='{"changes":[]}'
+if [ -z "$changelog" ] || [ "$changelog" = "null" ] || [ "$changelog" = "[]" ]; then
+    changes='[]'
+else
+    # oasdiff changelog --format json returns a raw array, not {"changes": [...]}
+    changes=$(echo "$changelog" | jq -c 'if type == "array" then . else .changes // [] end')
 fi
-
-# Extract just the changes array
-changes=$(echo "$changelog" | jq -c '.changes // []')
 
 # Extract PR number from GITHUB_REF (refs/pull/{number}/merge)
 pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
