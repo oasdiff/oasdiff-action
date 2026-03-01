@@ -57,8 +57,9 @@ payload=$(jq -n \
     --arg repo "$repo" \
     --argjson pr "$pr_number" \
     --arg sha "$GITHUB_SHA" \
+    --arg base_ref "$GITHUB_BASE_REF" \
     --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha}, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, changes: $changes}')
 
 # POST to oasdiff-service
 response=$(curl -s -w "\n%{http_code}" -X POST \
