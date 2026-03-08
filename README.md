@@ -12,7 +12,7 @@ The following actions run the oasdiff CLI directly in your GitHub runner — no 
 Detects breaking changes and writes inline GitHub annotations (`::error::`) to the Actions summary. Fails the workflow if breaking changes are found.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@main
+- uses: oasdiff/oasdiff-action/breaking@v0.0.30
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -37,7 +37,7 @@ The result is also available as a step output named `breaking`.
 Outputs all changes (breaking and non-breaking) between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/changelog@main
+- uses: oasdiff/oasdiff-action/changelog@v0.0.30
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -62,7 +62,7 @@ Outputs all changes (breaking and non-breaking) between two specs.
 Outputs the raw structural diff between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/diff@main
+- uses: oasdiff/oasdiff-action/diff@v0.0.30
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -82,10 +82,10 @@ Outputs the raw structural diff between two specs.
 
 ## Pro: Rich PR comment
 
-`oasdiff/oasdiff-action/pr-comment@main` posts a single auto-updating comment on the PR timeline every time the spec changes. Changes are grouped by severity (breaking → warnings → info) with links to the affected source lines.
+`oasdiff/oasdiff-action/pr-comment@v0.0.30` posts a single auto-updating comment on the PR timeline every time the spec changes. Changes are grouped by severity (breaking → warnings → info) with links to the affected source lines.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/pr-comment@main
+- uses: oasdiff/oasdiff-action/pr-comment@v0.0.30
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -96,7 +96,7 @@ Outputs the raw structural diff between two specs.
 |---|---|---|
 | `base` | Path to the base (old) OpenAPI spec | Yes |
 | `revision` | Path to the revised (new) OpenAPI spec | Yes |
-| `oasdiff-token` | oasdiff API token — [contact us](https://www.oasdiff.com/contact) to get one | Yes |
+| `oasdiff-token` | oasdiff API token — [sign up at oasdiff.com](https://oasdiff.com) to get one | Yes |
 | `github-token` | GitHub token for posting the comment | No (defaults to `${{ github.token }}`) |
 | `include-path-params` | Include path parameter names in endpoint matching | No |
 | `exclude-elements` | Exclude certain kinds of changes | No |
