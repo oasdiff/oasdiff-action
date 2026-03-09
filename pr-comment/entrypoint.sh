@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+git config --global --add safe.directory /github/workspace || true
+
 readonly base="$1"
 readonly revision="$2"
 readonly include_path_params="$3"
