@@ -29,14 +29,19 @@ if [ "$composed" = "true" ]; then
 fi
 
 # Debug: show git state
+echo "=== pwd ==="
+pwd
 echo "=== git log --oneline -5 ==="
 git log --oneline -5 || true
-echo "=== git branch -a ==="
-git branch -a || true
-echo "=== git show origin/main:simple.yaml (first 5 lines) ==="
-git show origin/main:simple.yaml 2>&1 | head -5 || true
-echo "=== git show HEAD:simple.yaml (first 5 lines) ==="
-git show HEAD:simple.yaml 2>&1 | head -5 || true
+echo "=== base path extracted ==="
+base_path="${base#*:}"
+echo "base_path: $base_path"
+echo "=== git show $base (last 10 lines) ==="
+git show "$base" 2>&1 | tail -10 || true
+echo "=== git show $revision (last 10 lines) ==="
+git show "$revision" 2>&1 | tail -10 || true
+echo "=== git diff $base $revision ==="
+git diff <(git show "$base" 2>/dev/null) <(git show "$revision" 2>/dev/null) || true
 
 # Run oasdiff changelog with JSON output
 if [ -n "$flags" ]; then
