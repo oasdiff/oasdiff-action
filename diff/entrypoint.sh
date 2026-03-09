@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+git config --global --add safe.directory /github/workspace || true
+
 write_output () {
     local output="$1"
     if [ -n "$output_to_file" ]; then
