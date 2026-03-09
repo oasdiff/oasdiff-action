@@ -3,6 +3,31 @@
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
+## Spec sources
+
+The `base` and `revision` inputs accept:
+
+| Format | Example |
+|---|---|
+| Local file path | `specs/base.yaml` |
+| http/s URL | `https://example.com/openapi.yaml` |
+| Git revision | `origin/${{ github.base_ref }}:openapi.yaml` |
+
+Git revision syntax (`<ref>:<path>`) lets you compare specs directly from git history without extra checkout steps. `fetch-depth: 0` is required in `actions/checkout` when using git revisions.
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0
+
+- uses: oasdiff/oasdiff-action/breaking@v0.0.31
+  with:
+    base: 'origin/${{ github.base_ref }}:openapi.yaml'
+    revision: 'HEAD:openapi.yaml'
+```
+
+---
+
 ## Free actions
 
 The following actions run the oasdiff CLI directly in your GitHub runner — no account or token required.
