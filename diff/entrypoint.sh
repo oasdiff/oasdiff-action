@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-git config --global --add safe.directory /github/workspace
+if [ -n "$GITHUB_WORKSPACE" ]; then
+  git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \
+  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+fi
 
 write_output () {
     local output="$1"
