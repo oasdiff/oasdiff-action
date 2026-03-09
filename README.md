@@ -12,7 +12,7 @@ The following actions run the oasdiff CLI directly in your GitHub runner — no 
 Detects breaking changes and writes inline GitHub annotations (`::error::`) to the Actions summary. Fails the workflow if breaking changes are found.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.0.30
+- uses: oasdiff/oasdiff-action/breaking@v0.0.31
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -37,7 +37,7 @@ The result is also available as a step output named `breaking`.
 Outputs all changes (breaking and non-breaking) between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/changelog@v0.0.30
+- uses: oasdiff/oasdiff-action/changelog@v0.0.31
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -62,7 +62,7 @@ Outputs all changes (breaking and non-breaking) between two specs.
 Outputs the raw structural diff between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/diff@v0.0.30
+- uses: oasdiff/oasdiff-action/diff@v0.0.31
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -82,10 +82,10 @@ Outputs the raw structural diff between two specs.
 
 ## Pro: Rich PR comment
 
-`oasdiff/oasdiff-action/pr-comment@v0.0.30` posts a single auto-updating comment on the PR timeline every time the spec changes. Changes are grouped by severity (breaking → warnings → info) with links to the affected source lines.
+`oasdiff/oasdiff-action/pr-comment@v0.0.31` posts a single auto-updating comment on the PR timeline every time the spec changes. Changes are grouped by severity (breaking → warnings → info) with links to the affected source lines.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/pr-comment@v0.0.30
+- uses: oasdiff/oasdiff-action/pr-comment@v0.0.31
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
