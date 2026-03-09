@@ -34,6 +34,7 @@ if [ -n "$flags" ]; then
 else
     changelog=$(oasdiff changelog "$base" "$revision" --format json)
 fi
+echo "oasdiff changelog output: $changelog"
 
 # If no changes, use empty array
 if [ -z "$changelog" ] || [ "$changelog" = "null" ] || [ "$changelog" = "[]" ]; then
