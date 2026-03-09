@@ -28,6 +28,16 @@ if [ "$composed" = "true" ]; then
     flags="$flags -c"
 fi
 
+# Debug: show git state
+echo "=== git log --oneline -5 ==="
+git log --oneline -5 || true
+echo "=== git branch -a ==="
+git branch -a || true
+echo "=== git show origin/main:simple.yaml (first 5 lines) ==="
+git show origin/main:simple.yaml 2>&1 | head -5 || true
+echo "=== git show HEAD:simple.yaml (first 5 lines) ==="
+git show HEAD:simple.yaml 2>&1 | head -5 || true
+
 # Run oasdiff changelog with JSON output
 if [ -n "$flags" ]; then
     changelog=$(oasdiff changelog "$base" "$revision" --format json $flags)
