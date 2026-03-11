@@ -3,6 +3,28 @@
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
+## Spec paths
+
+The `base` and `revision` inputs accept:
+
+- **File paths** — e.g. `openapi.yaml` or `specs/openapi.yaml` (files on disk)
+- **Git refs** — e.g. `origin/${{ github.base_ref }}:openapi.yaml` or `HEAD:openapi.yaml`
+- **URLs** — e.g. `https://example.com/openapi.yaml`
+
+File paths and git refs require the repository to be checked out first:
+
+```yaml
+- uses: actions/checkout@v6   # required for file paths and git refs
+- uses: oasdiff/oasdiff-action/breaking@v0.0.30
+  with:
+    base: 'origin/${{ github.base_ref }}:openapi.yaml'
+    revision: 'HEAD:openapi.yaml'
+```
+
+> `fetch-depth: 0` is **not** needed — the default shallow checkout is sufficient.
+
+---
+
 ## Spec sources
 
 The `base` and `revision` inputs accept:
