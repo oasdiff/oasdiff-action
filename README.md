@@ -7,46 +7,24 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
 
 The `base` and `revision` inputs accept:
 
-- **File paths** — e.g. `openapi.yaml` or `specs/openapi.yaml` (files on disk)
-- **Git refs** — e.g. `origin/${{ github.base_ref }}:openapi.yaml` or `HEAD:openapi.yaml`
-- **URLs** — e.g. `https://example.com/openapi.yaml`
-
-File paths and git refs require the repository to be checked out first:
-
-```yaml
-- uses: actions/checkout@v6   # required for file paths and git refs
-- uses: oasdiff/oasdiff-action/breaking@v0.0.30
-  with:
-    base: 'origin/${{ github.base_ref }}:openapi.yaml'
-    revision: 'HEAD:openapi.yaml'
-```
-
-> `fetch-depth: 0` is **not** needed — the default shallow checkout is sufficient.
-
----
-
-## Spec sources
-
-The `base` and `revision` inputs accept:
-
 | Format | Example |
 |---|---|
 | Local file path | `specs/base.yaml` |
 | http/s URL | `https://example.com/openapi.yaml` |
-| Git revision | `origin/${{ github.base_ref }}:openapi.yaml` |
+| Git ref | `origin/${{ github.base_ref }}:openapi.yaml` |
 
-Git revision syntax (`<ref>:<path>`) lets you compare specs directly from git history without extra checkout steps. `fetch-depth: 0` is required in `actions/checkout` when using git revisions.
+File paths and git refs require the repository to be checked out first:
 
 ```yaml
 - uses: actions/checkout@v6
-  with:
-    fetch-depth: 0
-
+- run: git fetch --depth=1 origin ${{ github.base_ref }}
 - uses: oasdiff/oasdiff-action/breaking@v0.0.31
   with:
     base: 'origin/${{ github.base_ref }}:openapi.yaml'
     revision: 'HEAD:openapi.yaml'
 ```
+
+> A targeted `git fetch` is needed so that `origin/${{ github.base_ref }}` is available. `fetch-depth: 0` is not required — fetching only the base branch is sufficient.
 
 ---
 
