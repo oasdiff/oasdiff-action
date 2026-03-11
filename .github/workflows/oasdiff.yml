@@ -1,0 +1,19 @@
+name: oasdiff
+
+on:
+  pull_request:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.31
+        with:
+          base: 'origin/${{ github.base_ref }}:simple.yaml'
+          revision: 'HEAD:simple.yaml'
+          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
