@@ -63,8 +63,10 @@ payload=$(jq -n \
     --argjson pr "$pr_number" \
     --arg sha "$GITHUB_SHA" \
     --arg base_ref "$GITHUB_BASE_REF" \
+    --arg base_file "$base" \
+    --arg rev_file "$revision" \
     --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
 
 # POST to oasdiff-service
 response=$(curl -s -w "\n%{http_code}" -X POST \
@@ -77,7 +79,11 @@ body=$(echo "$response" | sed '$d')
 
 if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
     comment_url=$(echo "$body" | jq -r '.comment_url // empty')
+    report_url=$(echo "$body" | jq -r '.report_url // empty')
     echo "PR comment posted: $comment_url"
+    if [ -n "$report_url" ]; then
+        echo "Review page: $report_url"
+    fi
 else
     echo "ERROR: oasdiff-service returned HTTP $http_code" >&2
     echo "$body" >&2
