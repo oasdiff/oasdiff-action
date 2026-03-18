@@ -13,6 +13,7 @@ readonly exclude_elements="$4"
 readonly composed="$5"
 readonly oasdiff_token="$6"
 readonly github_token="$7"
+readonly service_url="${8:-https://api.oasdiff.com}"
 
 echo "running oasdiff pr-comment base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed"
 
@@ -75,7 +76,7 @@ payload=$(jq -n \
 
 # POST to oasdiff-service
 response=$(curl -s -w "\n%{http_code}" -X POST \
-    "https://api.oasdiff.com/tenants/${oasdiff_token}/pr-comment" \
+    "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
     -d "$payload")
 
