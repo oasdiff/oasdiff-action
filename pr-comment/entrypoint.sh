@@ -55,6 +55,11 @@ fi
 owner="${GITHUB_REPOSITORY%%/*}"
 repo="${GITHUB_REPOSITORY#*/}"
 
+# Emit free review annotation (public repos only — no auth required)
+urlencode() { printf '%s' "$1" | jq -sRr @uri; }
+free_review_url="https://oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${GITHUB_BASE_REF}&rev_sha=${GITHUB_SHA}&base_file=$(urlencode "$base")&rev_file=$(urlencode "$revision")"
+echo "::notice::📋 View API changes → ${free_review_url}"
+
 # Build the JSON payload
 payload=$(jq -n \
     --arg token "$github_token" \
