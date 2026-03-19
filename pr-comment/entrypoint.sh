@@ -52,6 +52,12 @@ if [ -z "$pr_number" ]; then
     exit 1
 fi
 
+# Use the PR head SHA (not GITHUB_SHA which is the merge commit on pull_request events)
+head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH")
+if [ -z "$head_sha" ]; then
+    head_sha="$GITHUB_SHA"
+fi
+
 # Extract owner and repo from GITHUB_REPOSITORY
 owner="${GITHUB_REPOSITORY%%/*}"
 repo="${GITHUB_REPOSITORY#*/}"
@@ -61,7 +67,7 @@ urlencode() { printf '%s' "$1" | jq -sRr @uri; }
 # Strip git ref prefix (e.g. "origin/main:path.yaml" -> "path.yaml", "HEAD:path.yaml" -> "path.yaml")
 base_path=$(echo "$base" | sed 's/.*://')
 rev_path=$(echo "$revision" | sed 's/.*://')
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${GITHUB_BASE_REF}&rev_sha=${GITHUB_SHA}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${GITHUB_BASE_REF}&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
 # Build the JSON payload
@@ -70,7 +76,7 @@ payload=$(jq -n \
     --arg owner "$owner" \
     --arg repo "$repo" \
     --argjson pr "$pr_number" \
-    --arg sha "$GITHUB_SHA" \
+    --arg sha "$head_sha" \
     --arg base_ref "$GITHUB_BASE_REF" \
     --arg base_file "$base" \
     --arg rev_file "$revision" \
