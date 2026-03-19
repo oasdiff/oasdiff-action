@@ -26,6 +26,10 @@ inputs:
     description: 'GitHub token for posting PR comment'
     required: false
     default: '${{ github.token }}'
+  service-url:
+    description: 'oasdiff service base URL (override for testing)'
+    required: false
+    default: 'https://api.oasdiff.com'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -37,3 +41,4 @@ runs:
     - ${{ inputs.composed }}
     - ${{ inputs.oasdiff-token }}
     - ${{ inputs.github-token }}
+    - ${{ inputs.service-url }}

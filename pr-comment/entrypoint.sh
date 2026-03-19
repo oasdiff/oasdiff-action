@@ -13,6 +13,7 @@ readonly exclude_elements="$4"
 readonly composed="$5"
 readonly oasdiff_token="$6"
 readonly github_token="$7"
+readonly service_url="${8:-https://api.oasdiff.com}"
 
 echo "running oasdiff pr-comment base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed"
 
@@ -55,6 +56,11 @@ fi
 owner="${GITHUB_REPOSITORY%%/*}"
 repo="${GITHUB_REPOSITORY#*/}"
 
+# Emit free review annotation (public repos only — no auth required)
+urlencode() { printf '%s' "$1" | jq -sRr @uri; }
+free_review_url="https://oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${GITHUB_BASE_REF}&rev_sha=${GITHUB_SHA}&base_file=$(urlencode "$base")&rev_file=$(urlencode "$revision")"
+echo "::notice::📋 View API changes → ${free_review_url}"
+
 # Build the JSON payload
 payload=$(jq -n \
     --arg token "$github_token" \
@@ -63,12 +69,14 @@ payload=$(jq -n \
     --argjson pr "$pr_number" \
     --arg sha "$GITHUB_SHA" \
     --arg base_ref "$GITHUB_BASE_REF" \
+    --arg base_file "$base" \
+    --arg rev_file "$revision" \
     --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
 
 # POST to oasdiff-service
 response=$(curl -s -w "\n%{http_code}" -X POST \
-    "https://api.oasdiff.com/tenants/${oasdiff_token}/pr-comment" \
+    "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
     -d "$payload")
 
@@ -77,7 +85,11 @@ body=$(echo "$response" | sed '$d')
 
 if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
     comment_url=$(echo "$body" | jq -r '.comment_url // empty')
+    report_url=$(echo "$body" | jq -r '.report_url // empty')
     echo "PR comment posted: $comment_url"
+    if [ -n "$report_url" ]; then
+        echo "Review page: $report_url"
+    fi
 else
     echo "ERROR: oasdiff-service returned HTTP $http_code" >&2
     echo "$body" >&2
