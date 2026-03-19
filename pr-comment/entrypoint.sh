@@ -89,7 +89,7 @@ if [ -z "$oasdiff_token" ]; then
     exit 0
 fi
 
-response=$(curl -s -w "\n%{http_code}" -X POST \
+response=$(curl -s -L -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
     -d "$payload")
