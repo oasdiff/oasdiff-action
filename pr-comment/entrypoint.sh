@@ -74,7 +74,12 @@ payload=$(jq -n \
     --argjson changes "$changes" \
     '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
 
-# POST to oasdiff-service
+# POST to oasdiff-service (requires token)
+if [ -z "$oasdiff_token" ]; then
+    echo "No oasdiff-token provided — skipping PR comment. Sign up at https://oasdiff.com to get a token."
+    exit 0
+fi
+
 response=$(curl -s -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
