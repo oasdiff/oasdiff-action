@@ -18,7 +18,7 @@ File paths and git refs require the repository to be checked out first:
 ```yaml
 - uses: actions/checkout@v6
 - run: git fetch --depth=1 origin ${{ github.base_ref }}
-- uses: oasdiff/oasdiff-action/breaking@v0.0.31
+- uses: oasdiff/oasdiff-action/breaking@v0.0.34
   with:
     base: 'origin/${{ github.base_ref }}:openapi.yaml'
     revision: 'HEAD:openapi.yaml'
@@ -37,7 +37,7 @@ The following actions run the oasdiff CLI directly in your GitHub runner — no 
 Detects breaking changes and writes inline GitHub annotations (`::error::`) to the Actions summary. Fails the workflow if breaking changes are found.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.0.31
+- uses: oasdiff/oasdiff-action/breaking@v0.0.34
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -62,7 +62,7 @@ The result is also available as a step output named `breaking`.
 Outputs all changes (breaking and non-breaking) between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/changelog@v0.0.31
+- uses: oasdiff/oasdiff-action/changelog@v0.0.34
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -87,7 +87,7 @@ Outputs all changes (breaking and non-breaking) between two specs.
 Outputs the raw structural diff between two specs.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/diff@v0.0.31
+- uses: oasdiff/oasdiff-action/diff@v0.0.34
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
@@ -107,15 +107,25 @@ Outputs the raw structural diff between two specs.
 
 ## Pro: Rich PR comment
 
-`oasdiff/oasdiff-action/pr-comment@v0.0.31` posts a single auto-updating comment on the PR timeline every time the spec changes. Changes are grouped by severity (breaking → warnings → info) with links to the affected source lines.
+`oasdiff/oasdiff-action/pr-comment@v0.0.34` posts a single auto-updating comment on every PR that touches your API spec.
 
 ```yaml
-- uses: oasdiff/oasdiff-action/pr-comment@v0.0.31
+- uses: oasdiff/oasdiff-action/pr-comment@v0.0.34
   with:
     base: 'specs/base.yaml'
     revision: 'specs/revision.yaml'
     oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
 ```
+
+The comment shows a table of all changes, grouped by severity, with a **Review** link for each breaking change:
+
+| Severity | Change | Path | Review |
+|---|---|---|---|
+| 🔴 | response-property-removed | `GET /users` | ✅ [Approved by @alice](https://oasdiff.com/review/…) |
+| 🔴 | request-parameter-type-changed | `GET /products` | ⏳ [Review](https://oasdiff.com/review/…) |
+| 🟡 | response-optional-property-removed | `POST /orders` | ⏳ [Review](https://oasdiff.com/review/…) |
+
+Each **Review** link opens a hosted page with a side-by-side spec diff and **Approve / Reject** buttons. Approvals are tied to the change fingerprint and carry forward automatically when the branch is updated. A commit status check blocks the merge until every breaking change has been reviewed.
 
 | Input | Description | Required |
 |---|---|---|
