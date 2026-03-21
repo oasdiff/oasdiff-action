@@ -111,6 +111,7 @@ if [ -n "$breaking_changes" ]; then
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$GITHUB_BASE_REF")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these breaking changes → ${free_review_url}"
+    echo "### 📋 [Review & approve these breaking changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
 else
     write_output "No breaking changes"
 fi
