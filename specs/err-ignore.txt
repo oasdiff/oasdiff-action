@@ -1,1 +1,1 @@
-endpoint-deleted
+GET /pets api removed without deprecation
