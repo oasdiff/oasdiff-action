@@ -34,8 +34,6 @@ components:
           format: int64
     PetFields:
       type: object
-      required:
-        - name
       properties:
         name:
           type: string
