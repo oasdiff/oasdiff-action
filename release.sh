@@ -5,7 +5,6 @@
 #   e.g. ./release.sh v0.0.35
 #        ./release.sh        # auto-increments the patch version
 #
-# After running this, also run release.sh in the w3 repo to update the docs page.
 
 set -e
 
@@ -74,4 +73,3 @@ echo ""
 echo "Release $NEW complete."
 echo "  Tag:     https://github.com/oasdiff/oasdiff-action/releases/tag/${NEW}"
 echo ""
-echo "Next: run release.sh in the w3 repo to update the docs page (version: ${NEW})"
