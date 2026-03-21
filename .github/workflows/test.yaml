@@ -276,3 +276,29 @@ jobs:
               echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
               exit 1
             fi
+  oasdiff_breaking_flatten_allof:
+    runs-on: ubuntu-latest
+    name: Test breaking action with flatten-allof option
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running breaking action with flatten-allof option
+        id: test_breaking_flatten_allof
+        uses: ./breaking
+        with:
+          base: 'specs/base-allof.yaml'
+          revision: 'specs/revision-allof.yaml'
+          flatten-allof: true
+      - name: Test breaking action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_flatten_allof.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
+            exit 1
+          fi

@@ -1,82 +1,165 @@
 # oasdiff-action
 [![CI](https://github.com/oasdiff/oasdiff-action/actions/workflows/test.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions)
 
-GitHub actions for comparing OpenAPI specs and detect breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff) tool
+GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
-## How to use?
-Depending on your use case, refer below for instructions on generating reports for differences, breaking changes and changelog.
+## Free actions
 
-### Generate a diff report
-Copy and paste the following snippet into your build .yml file:
-```
-- name: Running OpenAPI Spec diff action
-  uses: oasdiff/oasdiff-action/diff@main
-  with:
-    base: 'specs/base.yaml'
-    revision: 'specs/revision.yaml'
-```
+The following actions run the oasdiff CLI directly in your GitHub runner — no account or token required.
 
-This action supports additional arguments. Most are converted to parameters for the `oasdiff` CLI.
+### Check for breaking changes
 
-| CLI                   | Action input        | Default |
-| --------------------- | ------------------- | ------- |
-| --fail-on-diff        | fail-on-diff        | false   |
-| --format              | format              | yaml    |
-| --include-path-params | include-path-params | false   |
-| --exclude-elements    | exclude-elements    | ''      |
-| --filter-extension    | filter-extension    | ''      |
-| --composed            | composed            | false   |
-| --flatten-allof       | flatten-allof       | false   |
-| N/A                   | output-to-file      | ''      |
+Detects breaking changes and writes inline GitHub annotations (`::error::`) to the Actions summary. Does not fail the workflow by default — set `fail-on` to `ERR` or `WARN` to fail on changes.
 
-### Check for breaking API changes, and fail if any are found
-Copy and paste the following snippet into your build .yml file:
-```
-- name: Running OpenAPI Spec diff action
-  uses: oasdiff/oasdiff-action/breaking@main
-  with:
-    base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
-    revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
+```yaml
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.34
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision.yaml'
 ```
 
-Additional arguments:
-
-| CLI                       | Action input            | Default |
-| ------------------------- | ----------------------- | ------- |
-| --fail-on                 | fail-on                 | empty   |
-| --include-checks          | include-checks          | csv     |
-| --include-path-params     | include-path-params     | false   |
-| --deprecation-days-beta   | deprecation-days-beta   | 31      |
-| --deprecation-days-stable | deprecation-days-stable | 180     |
-| --exclude-elements        | exclude-elements        | ''      |
-| --filter-extension        | filter-extension        | ''      |
-| --composed                | composed                | false   |
-| --flatten-allof           | flatten-allof           | false   |
-| N/A                       | output-to-file          | ''      |
-
-This action delivers a summary of breaking changes, accessible as a GitHub step output named `breaking`.
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
+| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
+| `fail-on` | `''` | Fail with exit code 1 if changes are found at or above this severity | `ERR`, `WARN` |
+| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
+| `deprecation-days-beta` | `31` | Minimum sunset period (days) for deprecation of beta API endpoints | integer |
+| `deprecation-days-stable` | `180` | Minimum sunset period (days) for deprecation of stable API endpoints | integer |
+| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
+| `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
+| `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
+| `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 
 ### Generate a changelog
-Copy and paste the following snippet into your build .yml file:
+
+Outputs all changes (breaking and non-breaking) between two specs.
+
+```yaml
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oasdiff/oasdiff-action/changelog@v0.0.34
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision.yaml'
 ```
-- name: Running OpenAPI Spec diff action
-  uses: oasdiff/oasdiff-action/changelog@main
+
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
+| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
+| `format` | `''` | Output format | `text`, `json`, `yaml`, `markdown`, `html` |
+| `level` | `''` | Minimum severity level to include in output | `INFO`, `WARN`, `ERR` |
+| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
+| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
+| `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
+| `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
+| `prefix-base` | `''` | Prefix to add to all paths in the base spec | string |
+| `prefix-revision` | `''` | Prefix to add to all paths in the revised spec | string |
+| `case-insensitive-headers` | `false` | Compare headers case-insensitively | `true`, `false` |
+| `template` | `''` | Custom Go template for output formatting | Go template string |
+| `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+
+### Generate a diff report
+
+Outputs the raw structural diff between two specs.
+
+```yaml
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oasdiff/oasdiff-action/diff@v0.0.34
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision.yaml'
+```
+
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
+| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
+| `fail-on-diff` | `false` | Fail with exit code 1 if any difference is found | `true`, `false` |
+| `format` | `yaml` | Output format | `yaml`, `json`, `text` |
+| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
+| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
+| `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
+| `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
+| `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+
+---
+
+## Spec paths
+
+The `base` and `revision` inputs accept:
+
+| Format | Example |
+|---|---|
+| Local file path | `specs/base.yaml` |
+| http/s URL | `https://example.com/openapi.yaml` |
+| Git ref | `origin/${{ github.base_ref }}:openapi.yaml` |
+
+File paths and git refs require the repository to be checked out first:
+
+```yaml
+- uses: actions/checkout@v6
+- run: git fetch --depth=1 origin ${{ github.base_ref }}
+- uses: oasdiff/oasdiff-action/breaking@v0.0.34
   with:
-    base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
-    revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
+    base: 'origin/${{ github.base_ref }}:openapi.yaml'
+    revision: 'HEAD:openapi.yaml'
 ```
 
-Additional arguments:
+> A targeted `git fetch` is needed so that `origin/${{ github.base_ref }}` is available. `fetch-depth: 0` is not required — fetching only the base branch is sufficient.
 
-| CLI                        | Action input             | Default |
-| -------------------------- | ------------------------ | ------- |
-| --include-path-params      | include-path-params      | false   |
-| --exclude-elements         | exclude-elements         | ''      |
-| --filter-extension         | filter-extension         | ''      |
-| --composed                 | composed                 | false   |
-| --flatten-allof            | flatten-allof            | false   |
-| --prefix-base              | prefix-base              | ''      |
-| --prefix-revision          | prefix-revision          | ''      |
-| --case-insensitive-headers | case-insensitive-headers | false   |
-| --format                   | format                   | ''      |
-| N/A                        | output-to-file           | ''      |
+---
+
+## Pro: Rich PR comment
+
+`oasdiff/oasdiff-action/pr-comment@v0.0.34` posts a single auto-updating comment on every PR that touches your API spec.
+
+```yaml
+jobs:
+  oasdiff:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: write
+    steps:
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.34
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision.yaml'
+          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
+```
+
+The comment shows a table of all changes, grouped by severity, with a **Review** link for each breaking change:
+
+| Severity | Change | Path | Review |
+|---|---|---|---|
+| 🔴 | response-property-removed | `GET /users` | ✅ [Approved by @alice](https://oasdiff.com/review/…) |
+| 🔴 | request-parameter-type-changed | `GET /products` | ⏳ [Review](https://oasdiff.com/review/…) |
+| 🟡 | response-optional-property-removed | `POST /orders` | ⏳ [Review](https://oasdiff.com/review/…) |
+
+Each **Review** link opens a hosted page with a side-by-side spec diff and **Approve / Reject** buttons. Approvals are tied to the change fingerprint and carry forward automatically when the branch is updated. A commit status check blocks the merge until every breaking change has been reviewed.
+
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
+| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
+| `oasdiff-token` | — (required) | oasdiff API token — [sign up at oasdiff.com](https://oasdiff.com) | — |
+| `github-token` | `${{ github.token }}` | GitHub token for posting the PR comment; requires `pull-requests: write`, `statuses: write` | — |
+| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
+| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
+| `composed` | `false` | Run in composed mode | `true`, `false` |
+
+An `OASDIFF_TOKEN` is issued per GitHub organization. [See pricing →](https://www.oasdiff.com/pricing)
