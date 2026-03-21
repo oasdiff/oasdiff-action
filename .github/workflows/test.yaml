@@ -302,3 +302,27 @@ jobs:
             echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
             exit 1
           fi
+  oasdiff_breaking_err_ignore:
+    runs-on: ubuntu-latest
+    name: Test breaking action with err-ignore option
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Running breaking action with err-ignore option
+        id: test_breaking_err_ignore
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          err-ignore: 'specs/err-ignore.txt'
+      - name: Test breaking changes are suppressed
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_err_ignore.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "No breaking changes" ]; then
+            echo "Expected 'No breaking changes' but got '$output'" >&2
+            exit 1
+          fi

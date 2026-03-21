@@ -40,6 +40,14 @@ inputs:
     description: 'Merge allOf subschemas into a single schema before diff'
     required: false
     default: 'false'
+  err-ignore:
+    description: 'Path to a file containing regex patterns for error-level changes to ignore'
+    required: false
+    default: ''
+  warn-ignore:
+    description: 'Path to a file containing regex patterns for warning-level changes to ignore'
+    required: false
+    default: ''
   output-to-file:
     description: 'Output to a file at the given path'
     required: false
@@ -62,4 +70,6 @@ runs:
     - ${{ inputs.filter-extension }}
     - ${{ inputs.composed }}
     - ${{ inputs.flatten-allof }}
+    - ${{ inputs.err-ignore }}
+    - ${{ inputs.warn-ignore }}
     - ${{ inputs.output-to-file }}
