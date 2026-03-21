@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+if [ -n "$GITHUB_WORKSPACE" ]; then
+  git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \
+  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+fi
+
 readonly base="$1"
 readonly revision="$2"
 readonly fail_on="$3"

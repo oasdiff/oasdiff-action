@@ -1,0 +1,44 @@
+name: 'OpenAPI Spec: PR Comment'
+description: 'Post an oasdiff API change report as a PR comment'
+inputs:
+  base:
+    description: 'Path of original OpenAPI spec in YAML or JSON format'
+    required: true
+  revision:
+    description: 'Path of revised OpenAPI spec in YAML or JSON format'
+    required: true
+  include-path-params:
+    description: 'Include path parameter names in endpoint matching'
+    required: false
+    default: 'false'
+  exclude-elements:
+    description: 'Exclude certain kinds of changes'
+    required: false
+    default: ''
+  composed:
+    description: 'Run in composed mode'
+    required: false
+    default: 'false'
+  oasdiff-token:
+    description: 'oasdiff API token (tenant ID). Required permissions: pull-requests: write, statuses: write'
+    required: true
+  github-token:
+    description: 'GitHub token for posting PR comment'
+    required: false
+    default: '${{ github.token }}'
+  service-url:
+    description: 'oasdiff service base URL (override for testing)'
+    required: false
+    default: 'https://api.oasdiff.com'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.base }}
+    - ${{ inputs.revision }}
+    - ${{ inputs.include-path-params }}
+    - ${{ inputs.exclude-elements }}
+    - ${{ inputs.composed }}
+    - ${{ inputs.oasdiff-token }}
+    - ${{ inputs.github-token }}
+    - ${{ inputs.service-url }}

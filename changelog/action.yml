@@ -47,6 +47,14 @@ inputs:
     description: 'Output format'
     required: false
     default: ''
+  template:
+    description: 'Template for changelog'
+    required: false
+    default: ''
+  level:
+    description: 'Output level: INFO (default), WARN, or ERR'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -66,3 +74,6 @@ runs:
     - ${{ inputs.prefix-revision }}
     - ${{ inputs.case-insensitive-headers }}
     - ${{ inputs.format }}
+    - ${{ inputs.template }}
+    - ${{ inputs.level }}
+

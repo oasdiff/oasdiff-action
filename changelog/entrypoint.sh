@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+if [ -n "$GITHUB_WORKSPACE" ]; then
+  git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \
+  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+fi
+
 write_output () {
     local output="$1"
     if [ -n "$output_to_file" ]; then
@@ -32,8 +37,10 @@ readonly prefix_base="$9"
 readonly prefix_revision="${10}"
 readonly case_insensitive_headers="${11}"
 readonly format="${12}"
+readonly template="${13}"
+readonly level="${14}"
 
-echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format"
+echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
 # Build flags to pass in command
 flags=""
@@ -63,6 +70,12 @@ if [ "$case_insensitive_headers" = "true" ]; then
 fi
 if [ -n "$format" ]; then
     flags="$flags --format $format"
+fi
+if [ -n "$template" ]; then
+    flags="$flags --template $template"
+fi
+if [ -n "$level" ]; then
+    flags="$flags --level $level"
 fi
 echo "flags: $flags"
 

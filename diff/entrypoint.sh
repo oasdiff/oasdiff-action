@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+if [ -n "$GITHUB_WORKSPACE" ]; then
+  git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \
+  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+fi
+
 write_output () {
     local output="$1"
     if [ -n "$output_to_file" ]; then
