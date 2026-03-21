@@ -17,7 +17,9 @@ readonly exclude_elements="$8"
 readonly filter_extension="$9"
 readonly composed="${10}"
 readonly flatten_allof="${11}"
-readonly output_to_file="${12}"
+readonly err_ignore="${12}"
+readonly warn_ignore="${13}"
+readonly output_to_file="${14}"
 
 write_output () {
     _write_output_output="$1"
@@ -39,7 +41,7 @@ write_output () {
     echo "$_write_output_output" >>"$GITHUB_OUTPUT"
 }
 
-echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file"
+echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, err_ignore: $err_ignore, warn_ignore: $warn_ignore, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
@@ -66,6 +68,12 @@ if [ "$composed" = "true" ]; then
 fi
 if [ "$flatten_allof" = "true" ]; then
     flags="$flags --flatten-allof"
+fi
+if [ -n "$err_ignore" ]; then
+    flags="$flags --err-ignore $err_ignore"
+fi
+if [ -n "$warn_ignore" ]; then
+    flags="$flags --warn-ignore $warn_ignore"
 fi
 echo "flags: $flags"
 

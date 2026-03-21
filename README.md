@@ -34,6 +34,8 @@ jobs:
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
+| `err-ignore` | `''` | Path to a file containing regex patterns for error-level changes to ignore | file path |
+| `warn-ignore` | `''` | Path to a file containing regex patterns for warning-level changes to ignore | file path |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 
 ### Generate a changelog
