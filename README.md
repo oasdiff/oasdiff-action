@@ -158,7 +158,7 @@ Each **Review** link opens a hosted page with a side-by-side spec diff and **App
 |---|---|---|---|
 | `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `oasdiff-token` | — (required) | oasdiff API token — [sign up at oasdiff.com](https://oasdiff.com) | — |
+| `oasdiff-token` | — (required) | oasdiff API token — [get one at oasdiff.com/pricing](https://oasdiff.com/pricing) | — |
 | `github-token` | `${{ github.token }}` | GitHub token for posting the PR comment; requires `pull-requests: write`, `statuses: write` | — |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
