@@ -33,6 +33,7 @@ jobs:
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 
 ### Generate a changelog
@@ -60,6 +61,7 @@ jobs:
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `prefix-base` | `''` | Prefix to add to all paths in the base spec | string |
 | `prefix-revision` | `''` | Prefix to add to all paths in the revised spec | string |
 | `case-insensitive-headers` | `false` | Compare headers case-insensitively | `true`, `false` |
@@ -91,6 +93,7 @@ jobs:
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
+| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 
 ---
