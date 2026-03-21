@@ -16,7 +16,7 @@ jobs:
   oasdiff:
     runs-on: ubuntu-latest
     steps:
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.34
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.35
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision.yaml'
@@ -47,7 +47,7 @@ jobs:
   oasdiff:
     runs-on: ubuntu-latest
     steps:
-      - uses: oasdiff/oasdiff-action/changelog@v0.0.34
+      - uses: oasdiff/oasdiff-action/changelog@v0.0.35
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision.yaml'
@@ -79,7 +79,7 @@ jobs:
   oasdiff:
     runs-on: ubuntu-latest
     steps:
-      - uses: oasdiff/oasdiff-action/diff@v0.0.34
+      - uses: oasdiff/oasdiff-action/diff@v0.0.35
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision.yaml'
@@ -115,7 +115,7 @@ File paths and git refs require the repository to be checked out first:
 ```yaml
 - uses: actions/checkout@v6
 - run: git fetch --depth=1 origin ${{ github.base_ref }}
-- uses: oasdiff/oasdiff-action/breaking@v0.0.34
+- uses: oasdiff/oasdiff-action/breaking@v0.0.35
   with:
     base: 'origin/${{ github.base_ref }}:openapi.yaml'
     revision: 'HEAD:openapi.yaml'
@@ -127,7 +127,7 @@ File paths and git refs require the repository to be checked out first:
 
 ## Pro: Rich PR comment
 
-`oasdiff/oasdiff-action/pr-comment@v0.0.34` posts a single auto-updating comment on every PR that touches your API spec.
+`oasdiff/oasdiff-action/pr-comment@v0.0.35` posts a single auto-updating comment on every PR that touches your API spec.
 
 ```yaml
 jobs:
@@ -137,7 +137,7 @@ jobs:
       pull-requests: write
       statuses: write
     steps:
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.34
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.35
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision.yaml'
