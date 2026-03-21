@@ -8,7 +8,7 @@ jobs:
     name: Test diff action
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running diff action
         id: test_ete
         uses: ./diff
@@ -28,7 +28,7 @@ jobs:
     name: Test diff action with exclude-elements option
     steps:
         - name: checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         - name: Running diff action with exclude-elements option
           id: test_exclude_elements
           uses: ./diff
@@ -53,7 +53,7 @@ jobs:
     name: Test diff action with composed option
     steps:
         - name: checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         - name: Running diff action with composed option
           id: test_composed
           uses: ./diff
@@ -80,7 +80,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running breaking action
         id: test_breaking_changes
         uses: ./breaking
@@ -117,7 +117,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "2 changes: 0 error, 2 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running breaking action
         id: test_breaking_changes
         uses: ./breaking
@@ -155,7 +155,7 @@ jobs:
         OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "9 changes: 6 error, 3 warning, 0 info"
       steps:
         - name: checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
           id: test_breaking_changes_matching_delimiter_not_found
           uses: ./breaking
@@ -180,7 +180,7 @@ jobs:
         OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
         - name: checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         - name: Running breaking action with composed option
           id: test_breaking_composed
           uses: ./breaking
@@ -204,7 +204,7 @@ jobs:
     name: Test breaking changes with deprecation
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set date for deprecated specs
         run: |
           # Deprecate Beta in 14 days
@@ -226,7 +226,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "21 changes: 2 error, 4 warning, 15 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running changelog action
         id: test_changelog
         uses: ./changelog
@@ -257,7 +257,7 @@ jobs:
     name: Test changelog action with composed option
     steps:
         - name: checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
         - name: Running changelog action with composed option
           id: test_changelog_composed
           uses: ./changelog
@@ -283,7 +283,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running breaking action with flatten-allof option
         id: test_breaking_flatten_allof
         uses: ./breaking
@@ -307,7 +307,7 @@ jobs:
     name: Test breaking action with err-ignore option
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Running breaking action with err-ignore option
         id: test_breaking_err_ignore
         uses: ./breaking
