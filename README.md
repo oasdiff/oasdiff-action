@@ -129,13 +129,12 @@ File paths and git refs require the repository to be checked out first:
 
 `oasdiff/oasdiff-action/pr-comment@v0.0.37` posts a single auto-updating comment on every PR that touches your API spec.
 
+**Prerequisite:** oasdiff posts comments and commit statuses as a GitHub App. [Install the oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new) on each repository before using this action.
+
 ```yaml
 jobs:
   oasdiff:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      statuses: write
     steps:
       - uses: oasdiff/oasdiff-action/pr-comment@v0.0.37
         with:
