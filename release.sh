@@ -1,16 +1,19 @@
 #!/bin/sh
 # release.sh — tag a new oasdiff-action version and update the README
 #
-# Usage: ./release.sh [new-version]
+# Usage: ./release.sh [new-version] [oasdiff-version]
 #   e.g. ./release.sh v0.0.35
-#        ./release.sh        # auto-increments the patch version
+#        ./release.sh v0.0.35 v1.13.5   # also pin the oasdiff CLI image to v1.13.5
+#        ./release.sh                    # auto-increments the patch version
 #
 
 set -e
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# ── Resolve version ──────────────────────────────────────────────────────────
+DOCKERFILES="breaking/Dockerfile changelog/Dockerfile diff/Dockerfile pr-comment/Dockerfile"
+
+# ── Resolve action version ───────────────────────────────────────────────────
 
 if [ -n "$1" ]; then
   NEW="$1"
@@ -35,7 +38,21 @@ if [ "$NEW" = "$OLD" ]; then
   exit 1
 fi
 
-echo "Releasing $OLD → $NEW"
+# ── Resolve oasdiff version ──────────────────────────────────────────────────
+
+OASDIFF_VERSION=""
+if [ -n "$2" ]; then
+  OASDIFF_VERSION="$2"
+  case "$OASDIFF_VERSION" in v*) ;; *) OASDIFF_VERSION="v${OASDIFF_VERSION}" ;; esac
+fi
+
+CURRENT_OASDIFF=$(grep -m1 'FROM tufin/oasdiff:' "$REPO_DIR/breaking/Dockerfile" | sed 's/FROM tufin\/oasdiff://')
+
+if [ -n "$OASDIFF_VERSION" ]; then
+  echo "Releasing $OLD → $NEW  (oasdiff ${CURRENT_OASDIFF} → ${OASDIFF_VERSION})"
+else
+  echo "Releasing $OLD → $NEW  (oasdiff ${CURRENT_OASDIFF}, unchanged)"
+fi
 
 # ── Validate git state ───────────────────────────────────────────────────────
 
@@ -59,11 +76,29 @@ git tag "$NEW"
 git push origin "$NEW"
 echo "✓ Tagged and pushed $NEW"
 
-# ── Update README.md ─────────────────────────────────────────────────────────
+# ── Update Dockerfiles ───────────────────────────────────────────────────────
+
+if [ -n "$OASDIFF_VERSION" ]; then
+  for df in $DOCKERFILES; do
+    sed -i '' "s|FROM tufin/oasdiff:.*|FROM tufin/oasdiff:${OASDIFF_VERSION}|" "$REPO_DIR/$df"
+  done
+  echo "✓ Updated Dockerfiles: oasdiff ${CURRENT_OASDIFF} → ${OASDIFF_VERSION}"
+fi
+
+# ── Update README.md and commit ──────────────────────────────────────────────
 
 sed -i '' "s|@${OLD}|@${NEW}|g" "$REPO_DIR/README.md"
-git add README.md
-git commit -m "chore: bump action version to ${NEW}"
+
+if [ -n "$OASDIFF_VERSION" ]; then
+  COMMIT_MSG="chore: bump action to ${NEW}, pin oasdiff to ${OASDIFF_VERSION}"
+  # shellcheck disable=SC2086
+  git add README.md $DOCKERFILES
+else
+  COMMIT_MSG="chore: bump action version to ${NEW}"
+  git add README.md
+fi
+
+git commit -m "$COMMIT_MSG"
 git push origin main
 echo "✓ Updated README.md and pushed"
 
