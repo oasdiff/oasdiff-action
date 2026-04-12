@@ -99,7 +99,7 @@ oasdiff breaking "$base" "$revision" $flags_with_githubactions
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-if [ -n "$breaking_changes" ]; then
+if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -q "^No "; then
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
     # Emit upgrade notice pointing to the free review page
     urlencode() { printf '%s' "$1" | jq -sRr @uri; }

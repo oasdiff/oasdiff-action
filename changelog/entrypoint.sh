@@ -97,7 +97,7 @@ else
     output=$(oasdiff changelog "$base" "$revision")
 fi
 
-if [ -n "$output" ]; then
+if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     write_output "$output"
 else
     write_output "No changelog changes"
