@@ -77,15 +77,15 @@ echo "Checking CI status for $(git rev-parse --short HEAD)..."
 CI_STATE=$(gh api "repos/oasdiff/oasdiff-action/commits/${HEAD_SHA}/status" --jq '.state' 2>/dev/null || echo "unknown")
 CI_CHECKS=$(gh api "repos/oasdiff/oasdiff-action/commits/${HEAD_SHA}/check-runs" --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != null)] | length' 2>/dev/null || echo "unknown")
 
-if [ "$CI_STATE" = "pending" ] || [ "$CI_CHECKS" = "unknown" ]; then
+if [ "$CI_STATE" = "failure" ] || [ "$CI_CHECKS" != "0" ]; then
+  echo "error: CI checks failed on HEAD — fix tests before releasing" >&2
+  echo "  See: https://github.com/oasdiff/oasdiff-action/actions" >&2
+  exit 1
+elif [ "$CI_STATE" = "pending" ] || [ "$CI_CHECKS" = "unknown" ]; then
   echo "warning: CI status is pending or unknown — tests may not have run yet" >&2
   printf "Continue anyway? [y/N] "
   read -r answer
   case "$answer" in [yY]*) ;; *) echo "Aborted."; exit 1 ;; esac
-elif [ "$CI_STATE" = "failure" ] || [ "$CI_CHECKS" != "0" ]; then
-  echo "error: CI checks failed on HEAD — fix tests before releasing" >&2
-  echo "  See: https://github.com/oasdiff/oasdiff-action/actions" >&2
-  exit 1
 fi
 
 echo "✓ CI passed on HEAD"
