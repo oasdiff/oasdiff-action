@@ -1,0 +1,73 @@
+name: Tag release and propagate to w3
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  tag-and-bump-w3:
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'bump/oasdiff-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract action version from PR body
+        id: version
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          ACTION_VERSION=$(echo "${PR_BODY}" | grep -o 'ACTION_VERSION=v[0-9.a-z-]*' | cut -d= -f2)
+          if [ -z "${ACTION_VERSION}" ]; then
+            echo "::error::Could not extract ACTION_VERSION from PR body"
+            exit 1
+          fi
+          echo "action_version=${ACTION_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Action version: ${ACTION_VERSION}"
+
+      - name: Generate token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CROSS_REPO_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_APP_PRIVATE_KEY }}
+          owner: oasdiff
+          repositories: oasdiff-action,w3
+
+      - name: Tag the release
+        uses: actions/checkout@v6
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Push tag
+        env:
+          ACTION_VERSION: ${{ steps.version.outputs.action_version }}
+        run: |
+          git tag "${ACTION_VERSION}"
+          git push origin "${ACTION_VERSION}"
+
+      - name: Checkout w3
+        uses: actions/checkout@v6
+        with:
+          repository: oasdiff/w3
+          token: ${{ steps.app-token.outputs.token }}
+          path: w3
+
+      - name: Bump w3 constants and create PR
+        env:
+          ACTION_VERSION: ${{ steps.version.outputs.action_version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          cd w3
+          git checkout -b "bump/oasdiff-action-${ACTION_VERSION}"
+          sed -i "s|'v[0-9.]*[-a-z0-9.]*'|'${ACTION_VERSION}'|" lib/constants.ts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lib/constants.ts
+          git commit -m "bump: oasdiff-action ${ACTION_VERSION}"
+          git push origin "bump/oasdiff-action-${ACTION_VERSION}"
+          gh pr create \
+            --repo oasdiff/w3 \
+            --base main \
+            --head "bump/oasdiff-action-${ACTION_VERSION}" \
+            --title "bump: oasdiff-action ${ACTION_VERSION}" \
+            --body "Automated version bump triggered by [oasdiff-action ${ACTION_VERSION}](https://github.com/oasdiff/oasdiff-action/releases/tag/${ACTION_VERSION})."
