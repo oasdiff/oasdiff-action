@@ -20,7 +20,7 @@ inputs:
     required: false
     default: 'false'
   oasdiff-token:
-    description: 'oasdiff API token (tenant ID). Required permissions: pull-requests: write, statuses: write'
+    description: 'oasdiff API token — sign up at oasdiff.com/pricing'
     required: true
   github-token:
     description: 'GitHub token for posting PR comment'

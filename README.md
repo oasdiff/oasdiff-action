@@ -172,7 +172,7 @@ When using git refs, you need to check out the repo and fetch the base branch:
 
 `oasdiff/oasdiff-action/pr-comment` posts a single auto-updating comment on every PR that touches your API spec.
 
-**Prerequisite:** oasdiff posts comments and commit statuses as a GitHub App. [Install the oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new) on each repository before using this action.
+**Getting started:** [Sign up for oasdiff Pro](https://www.oasdiff.com/pricing) to get your token, then follow the setup instructions to install the GitHub App, add your repo secret, and create the workflow.
 
 ```yaml
 name: oasdiff
@@ -196,9 +196,9 @@ The comment shows a table of all changes, grouped by severity, with a **Review**
 
 | Severity | Change | Path | Review |
 |---|---|---|---|
-| 🔴 | response-property-removed | `GET /users` | ✅ [Approved by @alice](https://oasdiff.com/review/…) |
-| 🔴 | request-parameter-type-changed | `GET /products` | ⏳ [Review](https://oasdiff.com/review/…) |
-| 🟡 | response-optional-property-removed | `POST /orders` | ⏳ [Review](https://oasdiff.com/review/…) |
+| 🔴 | request parameter became required | `GET /products` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=a570278809fa) |
+| 🔴 | api removed without deprecation | `DELETE /users/{userId}` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=bc9f61316c57) |
+| 🔴 | request parameter type changed | `GET /users/{userId}` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=b9a23e767b29) |
 
 Each **Review** link opens a hosted page with a side-by-side spec diff and **Approve / Reject** buttons. Approvals are tied to the change fingerprint and carry forward automatically when the branch is updated. A commit status check blocks the merge until every breaking change has been reviewed.
 
@@ -206,10 +206,9 @@ Each **Review** link opens a hosted page with a side-by-side spec diff and **App
 |---|---|---|---|
 | `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `oasdiff-token` | — (required) | oasdiff API token — [get one at oasdiff.com/pricing](https://oasdiff.com/pricing) | — |
-| `github-token` | `${{ github.token }}` | GitHub token for posting the PR comment; requires `pull-requests: write`, `statuses: write` | — |
+| `oasdiff-token` | — (required) | oasdiff API token — [sign up at oasdiff.com](https://www.oasdiff.com/pricing) | — |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 
-An `OASDIFF_TOKEN` is issued per GitHub organization. [See pricing →](https://www.oasdiff.com/pricing)
+[Get oasdiff Pro →](https://www.oasdiff.com/pricing)
