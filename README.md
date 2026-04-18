@@ -172,7 +172,7 @@ When using git refs, you need to check out the repo and fetch the base branch:
 
 `oasdiff/oasdiff-action/pr-comment` posts a single auto-updating comment on every PR that touches your API spec.
 
-**Prerequisite:** oasdiff posts comments and commit statuses as a GitHub App. [Install the oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new) on each repository before using this action.
+> **Getting started:** Set up oasdiff Pro through the [oasdiff dashboard](https://www.oasdiff.com/dashboard) — it walks you through signing up, installing the GitHub App, and adding the workflow to your repo.
 
 ```yaml
 name: oasdiff
@@ -206,10 +206,8 @@ Each **Review** link opens a hosted page with a side-by-side spec diff and **App
 |---|---|---|---|
 | `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `oasdiff-token` | — (required) | oasdiff API token — [get one at oasdiff.com/pricing](https://oasdiff.com/pricing) | — |
+| `oasdiff-token` | — (required) | oasdiff API token — [sign up at oasdiff.com](https://www.oasdiff.com/dashboard) | — |
 | `github-token` | `${{ github.token }}` | GitHub token for posting the PR comment; requires `pull-requests: write`, `statuses: write` | — |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
-
-An `OASDIFF_TOKEN` is issued per GitHub organization. [See pricing →](https://www.oasdiff.com/pricing)
