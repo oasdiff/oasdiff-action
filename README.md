@@ -196,9 +196,9 @@ The comment shows a table of all changes, grouped by severity, with a **Review**
 
 | Severity | Change | Path | Review |
 |---|---|---|---|
-| 🔴 | response-property-removed | `GET /users` | ✅ [Approved by @alice](https://oasdiff.com/review/…) |
-| 🔴 | request-parameter-type-changed | `GET /products` | ⏳ [Review](https://oasdiff.com/review/…) |
-| 🟡 | response-optional-property-removed | `POST /orders` | ⏳ [Review](https://oasdiff.com/review/…) |
+| 🔴 | endpoint-removed | `DELETE /users/{userId}` | ✅ [Approved by @alice](https://www.oasdiff.com/review/demo) |
+| 🔴 | request-parameter-type-changed | `GET /users/{userId}` | ⏳ [Review](https://www.oasdiff.com/review/demo) |
+| 🟡 | request-parameter-became-required | `GET /products` | ⏳ [Review](https://www.oasdiff.com/review/demo) |
 
 Each **Review** link opens a hosted page with a side-by-side spec diff and **Approve / Reject** buttons. Approvals are tied to the change fingerprint and carry forward automatically when the branch is updated. A commit status check blocks the merge until every breaking change has been reviewed.
 
