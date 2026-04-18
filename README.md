@@ -3,23 +3,57 @@
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
+## Quick start
+
+Add this workflow to `.github/workflows/oasdiff.yaml` to block PRs that introduce breaking API changes.
+Replace `openapi.yaml` with the path to your OpenAPI spec:
+
+```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  breaking-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.40-beta.3
+        with:
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
+          fail-on: WARN
+```
+
+This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found.
+
+---
+
 ## Free actions
 
 The following actions run the oasdiff CLI directly in your GitHub runner — no account or token required.
 
 ### Check for breaking changes
 
-Detects breaking changes and writes inline GitHub annotations (`::error::`) to the Actions summary. Does not fail the workflow by default — set `fail-on` to `ERR` or `WARN` to fail on changes.
+Detects breaking changes and writes inline GitHub annotations to the Actions summary. Fails the workflow when changes at or above the `fail-on` severity are found.
 
 ```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
 jobs:
-  oasdiff:
+  breaking-changes:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/breaking@v0.0.40-beta.3
         with:
-          base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
+          fail-on: WARN
 ```
 
 | Input | Default | Description | Accepted values |
@@ -27,6 +61,7 @@ jobs:
 | `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
 | `fail-on` | `''` | Fail with exit code 1 if changes are found at or above this severity | `ERR`, `WARN` |
+| `include-checks` | `''` | Include optional breaking change checks | check names (comma-separated) |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `deprecation-days-beta` | `31` | Minimum sunset period (days) for deprecation of beta API endpoints | integer |
 | `deprecation-days-stable` | `180` | Minimum sunset period (days) for deprecation of stable API endpoints | integer |
@@ -43,14 +78,20 @@ jobs:
 Outputs all changes (breaking and non-breaking) between two specs.
 
 ```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
 jobs:
-  oasdiff:
+  changelog:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/changelog@v0.0.40-beta.3
         with:
-          base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
 ```
 
 | Input | Default | Description | Accepted values |
@@ -75,14 +116,20 @@ jobs:
 Outputs the raw structural diff between two specs.
 
 ```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
 jobs:
-  oasdiff:
+  diff:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/diff@v0.0.40-beta.3
         with:
-          base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
 ```
 
 | Input | Default | Description | Accepted values |
@@ -106,40 +153,42 @@ The `base` and `revision` inputs accept:
 
 | Format | Example |
 |---|---|
-| Local file path | `specs/base.yaml` |
+| Git ref (recommended) | `origin/${{ github.base_ref }}:openapi.yaml` |
+| Local file path | `openapi.yaml` |
 | http/s URL | `https://example.com/openapi.yaml` |
-| Git ref | `origin/${{ github.base_ref }}:openapi.yaml` |
 
-File paths and git refs require the repository to be checked out first:
+When using git refs, you need to check out the repo and fetch the base branch:
 
 ```yaml
 - uses: actions/checkout@v6
 - run: git fetch --depth=1 origin ${{ github.base_ref }}
-- uses: oasdiff/oasdiff-action/breaking@v0.0.40-beta.3
-  with:
-    base: 'origin/${{ github.base_ref }}:openapi.yaml'
-    revision: 'HEAD:openapi.yaml'
 ```
 
-> A targeted `git fetch` is needed so that `origin/${{ github.base_ref }}` is available. `fetch-depth: 0` is not required — fetching only the base branch is sufficient.
+> `fetch-depth: 0` is not required — fetching only the base branch is sufficient.
 
 ---
 
 ## Pro: Rich PR comment
 
-`oasdiff/oasdiff-action/pr-comment@v0.0.40-beta.3` posts a single auto-updating comment on every PR that touches your API spec.
+`oasdiff/oasdiff-action/pr-comment` posts a single auto-updating comment on every PR that touches your API spec.
 
 **Prerequisite:** oasdiff posts comments and commit statuses as a GitHub App. [Install the oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new) on each repository before using this action.
 
 ```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
 jobs:
-  oasdiff:
+  pr-comment:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/pr-comment@v0.0.40-beta.3
         with:
-          base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
           oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
 ```
 
