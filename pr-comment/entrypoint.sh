@@ -58,6 +58,13 @@ if [ -z "$head_sha" ]; then
     head_sha="$GITHUB_SHA"
 fi
 
+# Capture the PR base SHA (the commit the PR is opened against). Pinning to
+# the SHA gives the review page a stable base reference: if the base branch
+# advances after the PR was opened, the review still shows the comparison
+# against the original base. base_ref is still sent for backward compatibility
+# with reports that don't yet have base_sha.
+base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH")
+
 # Extract owner and repo from GITHUB_REPOSITORY
 owner="${GITHUB_REPOSITORY%%/*}"
 repo="${GITHUB_REPOSITORY#*/}"
@@ -67,7 +74,9 @@ urlencode() { printf '%s' "$1" | jq -sRr @uri; }
 # Strip git ref prefix (e.g. "origin/main:path.yaml" -> "path.yaml", "HEAD:path.yaml" -> "path.yaml")
 base_path=$(echo "$base" | sed 's/.*://')
 rev_path=$(echo "$revision" | sed 's/.*://')
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${GITHUB_BASE_REF}&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+# Prefer the base SHA over the branch name so the link is commit-pinned.
+free_base_sha="${base_sha:-$GITHUB_BASE_REF}"
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${free_base_sha}&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
 # Build the JSON payload
@@ -78,10 +87,11 @@ payload=$(jq -n \
     --argjson pr "$pr_number" \
     --arg sha "$head_sha" \
     --arg base_ref "$GITHUB_BASE_REF" \
+    --arg base_sha "$base_sha" \
     --arg base_file "$base" \
     --arg rev_file "$revision" \
     --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref, base_sha: $base_sha}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
 
 # POST to oasdiff-service (requires token)
 if [ -z "$oasdiff_token" ]; then
