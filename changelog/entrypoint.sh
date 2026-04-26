@@ -99,6 +99,17 @@ fi
 
 if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     write_output "$output"
+    # Emit upgrade notice pointing to the free review page
+    urlencode() { printf '%s' "$1" | jq -sRr @uri; }
+    base_path=$(echo "$base" | sed 's/.*://')
+    rev_path=$(echo "$revision" | sed 's/.*://')
+    owner="${GITHUB_REPOSITORY%%/*}"
+    repo="${GITHUB_REPOSITORY#*/}"
+    head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+    if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
+    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$GITHUB_BASE_REF")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+    echo "::notice::📋 Review & approve these API changes → ${free_review_url}"
+    echo "### 📋 [Review & approve these API changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
 else
     write_output "No changelog changes"
 fi
