@@ -114,6 +114,26 @@ if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
     if [ -n "$report_url" ]; then
         echo "Review page: $report_url"
     fi
+elif [ "$http_code" = "409" ] && [ "$(echo "$body" | jq -r '.code // empty' 2>/dev/null)" = "github_app_not_installed" ]; then
+    # The service returns 409 with a structured JSON body when the customer's
+    # repo does not have the oasdiff GitHub App installed. Surface a clear,
+    # actionable error to the workflow log and step summary.
+    err_owner=$(echo "$body" | jq -r '.owner')
+    err_repo=$(echo "$body" | jq -r '.repo')
+    install_url=$(echo "$body" | jq -r '.install_url')
+    echo "::error title=oasdiff GitHub App not installed::Install the App at ${install_url} on ${err_owner}/${err_repo} and re-run this workflow."
+    {
+        echo "### ❌ oasdiff GitHub App not installed"
+        echo ""
+        echo "The oasdiff GitHub App is not installed on **${err_owner}/${err_repo}**, so this workflow cannot post a PR comment or set commit statuses."
+        echo ""
+        echo "**Fix:**"
+        echo ""
+        echo "1. Visit [${install_url}](${install_url})"
+        echo "2. Click **Install** and select the \`${err_owner}/${err_repo}\` repository"
+        echo "3. Re-run this workflow"
+    } >> "$GITHUB_STEP_SUMMARY"
+    exit 1
 else
     echo "ERROR: oasdiff-service returned HTTP $http_code" >&2
     echo "$body" >&2
