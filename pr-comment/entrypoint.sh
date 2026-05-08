@@ -29,11 +29,17 @@ if [ "$composed" = "true" ]; then
     flags="$flags -c"
 fi
 
-# Run oasdiff changelog with JSON output
-if [ -n "$flags" ]; then
-    changelog=$(oasdiff changelog "$base" "$revision" --format json $flags)
-else
-    changelog=$(oasdiff changelog "$base" "$revision" --format json)
+# Run oasdiff changelog with JSON output. Tolerate a non-zero exit so
+# fail-on settings in oasdiff.yaml don't abort the script before we get
+# the chance to post the PR comment — fail-on's job is to gate the
+# workflow on the *result*, which the service determines, not to block
+# us from collecting the JSON. Real failures (missing file, parse error)
+# still abort because they leave $changelog empty.
+oasdiff_exit=0
+changelog=$(oasdiff changelog "$base" "$revision" --format json $flags) || oasdiff_exit=$?
+if [ "$oasdiff_exit" -ne 0 ] && [ -z "$changelog" ]; then
+    echo "ERROR: oasdiff exited $oasdiff_exit with no output" >&2
+    exit $oasdiff_exit
 fi
 
 # If no changes, use empty array
