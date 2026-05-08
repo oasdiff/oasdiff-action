@@ -77,17 +77,23 @@ if [ -n "$warn_ignore" ]; then
 fi
 echo "flags: $flags"
 
-# Check for breaking changes
-if [ -n "$flags" ]; then
-    breaking_changes=$(oasdiff breaking "$base" "$revision" $flags)
-else
-    breaking_changes=$(oasdiff breaking "$base" "$revision")
+# Run 1: capture the default-format report and the exit code, applying
+# --fail-on if the input requested it. Tolerate non-zero exit so we can
+# still render the report and write GITHUB_OUTPUT below — the caller's
+# fail-on (whether from the input or from oasdiff.yaml) is preserved
+# via $exit_code at the end.
+fail_on_flag=""
+if [ -n "$fail_on" ]; then
+    fail_on_flag="--fail-on $fail_on"
 fi
+exit_code=0
+breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag) || exit_code=$?
 
-# Updating GitHub Action summary with formatted output
-flags_with_githubactions="$flags --format githubactions"
-# Writes the summary to log and updates GitHub Action summary
-oasdiff breaking "$base" "$revision" $flags_with_githubactions
+# Run 2: render annotations to stdout via --format githubactions so
+# GitHub parses them onto the PR's "Files changed" tab. Tolerate
+# non-zero exit (could be triggered by oasdiff.yaml fail-on); the
+# authoritative exit code is from Run 1.
+oasdiff breaking "$base" "$revision" $flags --format githubactions || true
 
 # *** GitHub Action step output ***
 
@@ -118,8 +124,4 @@ fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
 
-# First output the changes (above) and then run oasdiff to check --fail-on
-if [ -n "$fail_on" ]; then
-    flags="$flags --fail-on $fail_on"
-    oasdiff breaking "$base" "$revision" $flags > /dev/null
-fi
+exit $exit_code
