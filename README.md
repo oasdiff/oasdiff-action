@@ -51,7 +51,7 @@ Any flag the oasdiff CLI supports works in the config file — see [CONFIG-FILES
 
 Action `inputs:` take precedence over config-file values, so you can use the file for shared defaults across workflows and override per-workflow via inputs.
 
-> **Limitation**: boolean flags can only be enabled through an action input. If your `oasdiff.yaml` sets `composed: true` and you want to disable it for a specific workflow run, edit the YAML — passing `composed: 'false'` in the action input has no effect.
+> **Limitation**: action inputs can only turn a boolean flag *on*, not *off*. If your `oasdiff.yaml` sets `composed: true`, passing `composed: 'false'` to the action has no effect — to disable it for a specific workflow run, edit the YAML.
 
 ### Check for breaking changes
 
