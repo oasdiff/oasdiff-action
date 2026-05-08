@@ -3,6 +3,17 @@
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
+## Contents
+
+- [Quick start](#quick-start)
+- [Free actions](#free-actions)
+  - [Check for breaking changes](#check-for-breaking-changes)
+  - [Generate a changelog](#generate-a-changelog)
+  - [Generate a diff report](#generate-a-diff-report)
+  - [Configuring with `oasdiff.yaml`](#configuring-with-oasdiffyaml)
+- [Spec paths](#spec-paths)
+- [Pro: Rich PR comment](#pro-rich-pr-comment)
+
 ## Quick start
 
 Add this workflow to `.github/workflows/oasdiff.yaml` to block PRs that introduce breaking API changes.
@@ -33,25 +44,6 @@ This compares your spec on the PR branch against the base branch and fails the w
 ## Free actions
 
 The following actions run the oasdiff CLI directly in your GitHub runner — no account or token required.
-
-### Configuring with `oasdiff.yaml`
-
-All free actions inherit the CLI's config-file support. Drop an `oasdiff.yaml` at your repo root and the actions pick it up automatically — no extra wiring needed:
-
-```yaml
-# oasdiff.yaml at your repo root
-exclude-elements:
-  - endpoints
-flatten-allof: true
-deprecation-days-stable: 180
-fail-on: ERR
-```
-
-Any flag the oasdiff CLI supports works in the config file — see [CONFIG-FILES.md](https://github.com/oasdiff/oasdiff/blob/main/docs/CONFIG-FILES.md) for the full reference and supported file formats (`oasdiff.{json,yaml,yml,toml,hcl}`).
-
-Action `inputs:` take precedence over config-file values, so you can use the file for shared defaults across workflows and override per-workflow via inputs.
-
-> **Limitation**: boolean flags can only be enabled through an action input. If your `oasdiff.yaml` sets `composed: true` and you want to disable it for a specific workflow run, edit the YAML — passing `composed: 'false'` in the action input has no effect.
 
 ### Check for breaking changes
 
@@ -163,6 +155,25 @@ jobs:
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+
+### Configuring with `oasdiff.yaml`
+
+All free actions inherit the CLI's config-file support. Drop an `oasdiff.yaml` at your repo root and the actions pick it up automatically — no extra wiring needed:
+
+```yaml
+# oasdiff.yaml at your repo root
+exclude-elements:
+  - endpoints
+flatten-allof: true
+deprecation-days-stable: 180
+fail-on: ERR
+```
+
+Any flag the oasdiff CLI supports works in the config file — see [CONFIG-FILES.md](https://github.com/oasdiff/oasdiff/blob/main/docs/CONFIG-FILES.md) for the full reference and supported file formats (`oasdiff.{json,yaml,yml,toml,hcl}`).
+
+Action `inputs:` take precedence over config-file values, so you can use the file for shared defaults across workflows and override per-workflow via inputs.
+
+> **Limitation**: action inputs can only turn a boolean flag *on*, not *off*. If your `oasdiff.yaml` sets `composed: true`, passing `composed: 'false'` to the action has no effect — to disable it for a specific workflow run, edit the YAML.
 
 ---
 
