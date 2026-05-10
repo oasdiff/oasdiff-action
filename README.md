@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.46
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.46
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -98,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0.0.46
+      - uses: oasdiff/oasdiff-action/changelog@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -136,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/diff@v0.0.46
+      - uses: oasdiff/oasdiff-action/diff@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -195,7 +195,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.46
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
