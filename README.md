@@ -10,6 +10,7 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
   - [Check for breaking changes](#check-for-breaking-changes)
   - [Generate a changelog](#generate-a-changelog)
   - [Generate a diff report](#generate-a-diff-report)
+- [Configuring with `.oasdiff.yaml`](#configuring-with-oasdiffyaml)
 - [Spec paths](#spec-paths)
 - [Pro: Rich PR comment](#pro-rich-pr-comment)
 
@@ -154,6 +155,45 @@ jobs:
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+
+---
+
+## Configuring with `.oasdiff.yaml`
+
+All four actions (`breaking`, `changelog`, `diff`, `pr-comment`) automatically pick up a `.oasdiff.yaml` file from the root of your checked-out repository. This lets you keep CLI-flag-shaped configuration in source control instead of repeating the same `with:` block in every workflow file.
+
+Drop a `.oasdiff.yaml` next to your spec:
+
+```yaml
+# .oasdiff.yaml
+fail-on: ERR
+exclude-elements:
+  - description
+  - title
+  - summary
+err-ignore: ./oasdiff-err-ignore.txt
+```
+
+The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions/checkout` populates), so no extra steps are needed.
+
+**Precedence**: action `with:` inputs override `.oasdiff.yaml` values, which override built-in defaults. Setting `fail-on: ERR` in YAML and leaving the action's `fail-on:` input empty applies the YAML value; setting both lets the action input win.
+
+**Legacy filename**: the older `oasdiff.yaml` (without the leading dot) still works as a back-compat fallback. New projects should prefer `.oasdiff.yaml` to match the dotfile convention used by `.eslintrc`, `.golangci.yml`, and similar tools.
+
+**Explicit path**: if your config lives somewhere else, set `OASDIFF_CONFIG` in the workflow `env:` to point at it:
+
+```yaml
+- uses: oasdiff/oasdiff-action/breaking@v0.0.47
+  env:
+    OASDIFF_CONFIG: ./config/oasdiff.yaml
+  with:
+    base: 'origin/${{ github.base_ref }}:openapi.yaml'
+    revision: 'HEAD:openapi.yaml'
+```
+
+For the full list of supported keys and how relative paths inside the config file are resolved, see the [oasdiff configuration-file reference](https://github.com/oasdiff/oasdiff/blob/main/docs/CONFIG-FILES.md).
+
+Available since action `v0.0.47` (which ships oasdiff `v1.15.3`).
 
 ---
 
