@@ -326,3 +326,258 @@ jobs:
             echo "Expected 'No breaking changes' but got '$output'" >&2
             exit 1
           fi
+
+  # ---------------------------------------------------------------------
+  # .oasdiff.yaml config-file support — verify all three free actions
+  # pick up .oasdiff.yaml from the repo root automatically (via the CLI's
+  # cwd-based config-file lookup; the runner mounts $GITHUB_WORKSPACE as
+  # the container's WORKDIR).
+  # ---------------------------------------------------------------------
+
+  oasdiff_breaking_yaml_config_fail_on:
+    runs-on: ubuntu-latest
+    name: Test breaking action picks up fail-on from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          fail-on: ERR
+          EOF
+      - name: Running breaking action without fail-on input
+        id: test_yaml_fail_on
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert action failed (.oasdiff.yaml fail-on triggered) and report rendered
+        run: |
+          if [ "${{ steps.test_yaml_fail_on.outcome }}" != "failure" ]; then
+            echo "Expected action to fail because .oasdiff.yaml sets fail-on: ERR and the spec has an ERR-level breaking change. Got outcome: ${{ steps.test_yaml_fail_on.outcome }}" >&2
+            exit 1
+          fi
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_fail_on.outputs.breaking }}
+          $delimiter
+          )
+          # Even when fail-on triggers, the entrypoint should still render
+          # the report. Check that the breaking output is non-empty and
+          # matches the same shape as a normal fail-on-input run.
+          if [ "$output" != "1 changes: 1 error, 0 warning, 0 info" ]; then
+            echo "Expected '1 changes: 1 error, 0 warning, 0 info' to be rendered alongside fail-on, got: '$output'" >&2
+            exit 1
+          fi
+
+  oasdiff_breaking_yaml_config_err_ignore:
+    runs-on: ubuntu-latest
+    name: Test breaking action picks up err-ignore from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          err-ignore: specs/err-ignore.txt
+          EOF
+      - name: Running breaking action without err-ignore input
+        id: test_yaml_err_ignore
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert breaking changes were suppressed by .oasdiff.yaml
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_err_ignore.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "No breaking changes" ]; then
+            echo "Expected 'No breaking changes' (err-ignore from .oasdiff.yaml should suppress findings) but got '$output'" >&2
+            exit 1
+          fi
+
+  oasdiff_changelog_yaml_config_level:
+    runs-on: ubuntu-latest
+    name: Test changelog action picks up level from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          level: ERR
+          EOF
+      - name: Running changelog action without level input
+        id: test_yaml_level
+        uses: ./changelog
+        with:
+          base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
+      - name: Assert level filter from .oasdiff.yaml suppressed warning/info findings
+        run: |
+          # Without the YAML, the same specs produce "21 changes: 2 error, 4 warning, 15 info".
+          # With level: ERR in YAML, only the 2 errors should remain.
+          output=$(echo "${{ steps.test_yaml_level.outputs.changelog }}" | head -n 1)
+          if [[ "$output" != "2 changes: 2 error, 0 warning, 0 info" ]]; then
+            echo "Expected '2 changes: 2 error, 0 warning, 0 info' (level: ERR from .oasdiff.yaml) but got '$output'" >&2
+            exit 1
+          fi
+
+  oasdiff_diff_yaml_config_exclude_elements:
+    runs-on: ubuntu-latest
+    name: Test diff action picks up exclude-elements from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          exclude-elements:
+            - description
+            - title
+            - summary
+          format: text
+          EOF
+      - name: Running diff action without exclude-elements input
+        id: test_yaml_exclude_elements
+        uses: ./diff
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/base-exclude-elements.yaml'
+      - name: Assert diff is empty thanks to exclude-elements from .oasdiff.yaml
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_exclude_elements.outputs.diff }}
+          $delimiter
+          )
+          if [ "$output" != "No changes" ]; then
+            echo "Expected 'No changes' (exclude-elements from .oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------
+  # pr-comment entrypoint: oasdiff exit-code tolerance.
+  #
+  # The pr-comment script wraps the oasdiff changelog invocation so a
+  # non-zero exit (e.g. fail-on triggered from .oasdiff.yaml) does not
+  # abort the script under set -e. Real failures (no output) still
+  # abort. These two jobs run pr-comment/entrypoint.sh directly with a
+  # stubbed oasdiff on PATH so we don't need a Docker image, an
+  # oasdiff-token, or a reachable oasdiff-service.
+  # ---------------------------------------------------------------------
+
+  pr_comment_tolerates_oasdiff_fail_on:
+    runs-on: ubuntu-latest
+    name: Test pr-comment proceeds when oasdiff exits non-zero with output
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to simulate fail-on triggered
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          # Simulate fail-on: emit valid JSON, then exit non-zero.
+          echo '[]'
+          exit 1
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # Minimum env the entrypoint reads
+          mkdir -p /tmp/run
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          # Run with empty oasdiff_token: the script should reach the
+          # "No oasdiff-token provided" branch and exit 0. If the fix
+          # is missing, set -e would abort at the oasdiff invocation
+          # (exit 1, no notice line).
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' '' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output ---"
+          echo "$out"
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: expected exit 0 (script should reach the no-token skip), got $rc" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script aborted before emitting the review-page notice; the oasdiff fail-on tolerance fix is missing" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "No oasdiff-token provided"; then
+            echo "FAIL: script aborted before reaching the no-token skip" >&2
+            exit 1
+          fi
+          echo "PASS"
+
+  pr_comment_aborts_on_oasdiff_real_failure:
+    runs-on: ubuntu-latest
+    name: Test pr-comment aborts when oasdiff exits non-zero with no output
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to simulate a real failure
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          # Simulate a real failure: no stdout, non-zero exit.
+          echo "oasdiff: spec not found" >&2
+          exit 2
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          mkdir -p /tmp/run
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' '' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output ---"
+          echo "$out"
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 2 ]; then
+            echo "FAIL: expected exit 2 (oasdiff exit propagated), got $rc" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "ERROR: oasdiff exited 2 with no output"; then
+            echo "FAIL: expected the explicit no-output error message" >&2
+            exit 1
+          fi
+          if echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script proceeded past the oasdiff failure; the early-abort branch is missing" >&2
+            exit 1
+          fi
+          echo "PASS"
