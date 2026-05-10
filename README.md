@@ -10,7 +10,6 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
   - [Check for breaking changes](#check-for-breaking-changes)
   - [Generate a changelog](#generate-a-changelog)
   - [Generate a diff report](#generate-a-diff-report)
-  - [Configuring with `oasdiff.yaml`](#configuring-with-oasdiffyaml)
 - [Spec paths](#spec-paths)
 - [Pro: Rich PR comment](#pro-rich-pr-comment)
 
@@ -30,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.46
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -60,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.46
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -99,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0.0.46
+      - uses: oasdiff/oasdiff-action/changelog@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -137,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/diff@v0.0.46
+      - uses: oasdiff/oasdiff-action/diff@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -155,25 +154,6 @@ jobs:
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
-
-### Configuring with `oasdiff.yaml`
-
-All free actions inherit the CLI's config-file support. Drop an `oasdiff.yaml` at your repo root and the actions pick it up automatically — no extra wiring needed:
-
-```yaml
-# oasdiff.yaml at your repo root
-exclude-elements:
-  - endpoints
-flatten-allof: true
-deprecation-days-stable: 180
-fail-on: ERR
-```
-
-Any flag the oasdiff CLI supports works in the config file — see [CONFIG-FILES.md](https://github.com/oasdiff/oasdiff/blob/main/docs/CONFIG-FILES.md) for the full reference and supported file formats (`oasdiff.{json,yaml,yml,toml,hcl}`).
-
-Action `inputs:` take precedence over config-file values, so you can use the file for shared defaults across workflows and override per-workflow via inputs.
-
-> **Limitation**: action inputs can only turn a boolean flag *on*, not *off*. If your `oasdiff.yaml` sets `composed: true`, passing `composed: 'false'` to the action has no effect — to disable it for a specific workflow run, edit the YAML.
 
 ---
 
@@ -215,7 +195,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.46
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.47
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
