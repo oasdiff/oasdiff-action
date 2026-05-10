@@ -328,21 +328,21 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------
-  # oasdiff.yaml config-file support — verify all three free actions
-  # pick up oasdiff.yaml from the repo root automatically (via the CLI's
+  # .oasdiff.yaml config-file support — verify all three free actions
+  # pick up .oasdiff.yaml from the repo root automatically (via the CLI's
   # cwd-based config-file lookup; the runner mounts $GITHUB_WORKSPACE as
   # the container's WORKDIR).
   # ---------------------------------------------------------------------
 
   oasdiff_breaking_yaml_config_fail_on:
     runs-on: ubuntu-latest
-    name: Test breaking action picks up fail-on from oasdiff.yaml
+    name: Test breaking action picks up fail-on from .oasdiff.yaml
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: Drop oasdiff.yaml at repo root
+      - name: Drop .oasdiff.yaml at repo root
         run: |
-          cat > oasdiff.yaml <<EOF
+          cat > .oasdiff.yaml <<EOF
           fail-on: ERR
           EOF
       - name: Running breaking action without fail-on input
@@ -352,10 +352,10 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
-      - name: Assert action failed (oasdiff.yaml fail-on triggered) and report rendered
+      - name: Assert action failed (.oasdiff.yaml fail-on triggered) and report rendered
         run: |
           if [ "${{ steps.test_yaml_fail_on.outcome }}" != "failure" ]; then
-            echo "Expected action to fail because oasdiff.yaml sets fail-on: ERR and the spec has an ERR-level breaking change. Got outcome: ${{ steps.test_yaml_fail_on.outcome }}" >&2
+            echo "Expected action to fail because .oasdiff.yaml sets fail-on: ERR and the spec has an ERR-level breaking change. Got outcome: ${{ steps.test_yaml_fail_on.outcome }}" >&2
             exit 1
           fi
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
@@ -373,13 +373,13 @@ jobs:
 
   oasdiff_breaking_yaml_config_err_ignore:
     runs-on: ubuntu-latest
-    name: Test breaking action picks up err-ignore from oasdiff.yaml
+    name: Test breaking action picks up err-ignore from .oasdiff.yaml
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: Drop oasdiff.yaml at repo root
+      - name: Drop .oasdiff.yaml at repo root
         run: |
-          cat > oasdiff.yaml <<EOF
+          cat > .oasdiff.yaml <<EOF
           err-ignore: specs/err-ignore.txt
           EOF
       - name: Running breaking action without err-ignore input
@@ -388,7 +388,7 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
-      - name: Assert breaking changes were suppressed by oasdiff.yaml
+      - name: Assert breaking changes were suppressed by .oasdiff.yaml
         run: |
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
           output=$(cat <<-$delimiter
@@ -396,19 +396,19 @@ jobs:
           $delimiter
           )
           if [ "$output" != "No breaking changes" ]; then
-            echo "Expected 'No breaking changes' (err-ignore from oasdiff.yaml should suppress findings) but got '$output'" >&2
+            echo "Expected 'No breaking changes' (err-ignore from .oasdiff.yaml should suppress findings) but got '$output'" >&2
             exit 1
           fi
 
   oasdiff_changelog_yaml_config_level:
     runs-on: ubuntu-latest
-    name: Test changelog action picks up level from oasdiff.yaml
+    name: Test changelog action picks up level from .oasdiff.yaml
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: Drop oasdiff.yaml at repo root
+      - name: Drop .oasdiff.yaml at repo root
         run: |
-          cat > oasdiff.yaml <<EOF
+          cat > .oasdiff.yaml <<EOF
           level: ERR
           EOF
       - name: Running changelog action without level input
@@ -417,25 +417,25 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
-      - name: Assert level filter from oasdiff.yaml suppressed warning/info findings
+      - name: Assert level filter from .oasdiff.yaml suppressed warning/info findings
         run: |
           # Without the YAML, the same specs produce "21 changes: 2 error, 4 warning, 15 info".
           # With level: ERR in YAML, only the 2 errors should remain.
           output=$(echo "${{ steps.test_yaml_level.outputs.changelog }}" | head -n 1)
           if [[ "$output" != "2 changes: 2 error, 0 warning, 0 info" ]]; then
-            echo "Expected '2 changes: 2 error, 0 warning, 0 info' (level: ERR from oasdiff.yaml) but got '$output'" >&2
+            echo "Expected '2 changes: 2 error, 0 warning, 0 info' (level: ERR from .oasdiff.yaml) but got '$output'" >&2
             exit 1
           fi
 
   oasdiff_diff_yaml_config_exclude_elements:
     runs-on: ubuntu-latest
-    name: Test diff action picks up exclude-elements from oasdiff.yaml
+    name: Test diff action picks up exclude-elements from .oasdiff.yaml
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: Drop oasdiff.yaml at repo root
+      - name: Drop .oasdiff.yaml at repo root
         run: |
-          cat > oasdiff.yaml <<EOF
+          cat > .oasdiff.yaml <<EOF
           exclude-elements:
             - description
             - title
@@ -448,7 +448,7 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/base-exclude-elements.yaml'
-      - name: Assert diff is empty thanks to exclude-elements from oasdiff.yaml
+      - name: Assert diff is empty thanks to exclude-elements from .oasdiff.yaml
         run: |
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
           output=$(cat <<-$delimiter
@@ -456,6 +456,6 @@ jobs:
           $delimiter
           )
           if [ "$output" != "No changes" ]; then
-            echo "Expected 'No changes' (exclude-elements from oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
+            echo "Expected 'No changes' (exclude-elements from .oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
             exit 1
           fi
