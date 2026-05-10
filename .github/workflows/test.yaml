@@ -459,3 +459,125 @@ jobs:
             echo "Expected 'No changes' (exclude-elements from .oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
             exit 1
           fi
+
+  # ---------------------------------------------------------------------
+  # pr-comment entrypoint: oasdiff exit-code tolerance.
+  #
+  # The pr-comment script wraps the oasdiff changelog invocation so a
+  # non-zero exit (e.g. fail-on triggered from .oasdiff.yaml) does not
+  # abort the script under set -e. Real failures (no output) still
+  # abort. These two jobs run pr-comment/entrypoint.sh directly with a
+  # stubbed oasdiff on PATH so we don't need a Docker image, an
+  # oasdiff-token, or a reachable oasdiff-service.
+  # ---------------------------------------------------------------------
+
+  pr_comment_tolerates_oasdiff_fail_on:
+    runs-on: ubuntu-latest
+    name: Test pr-comment proceeds when oasdiff exits non-zero with output
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to simulate fail-on triggered
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          # Simulate fail-on: emit valid JSON, then exit non-zero.
+          echo '[]'
+          exit 1
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # Minimum env the entrypoint reads
+          mkdir -p /tmp/run
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          # Run with empty oasdiff_token: the script should reach the
+          # "No oasdiff-token provided" branch and exit 0. If the fix
+          # is missing, set -e would abort at the oasdiff invocation
+          # (exit 1, no notice line).
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' '' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output ---"
+          echo "$out"
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: expected exit 0 (script should reach the no-token skip), got $rc" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script aborted before emitting the review-page notice; the oasdiff fail-on tolerance fix is missing" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "No oasdiff-token provided"; then
+            echo "FAIL: script aborted before reaching the no-token skip" >&2
+            exit 1
+          fi
+          echo "PASS"
+
+  pr_comment_aborts_on_oasdiff_real_failure:
+    runs-on: ubuntu-latest
+    name: Test pr-comment aborts when oasdiff exits non-zero with no output
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to simulate a real failure
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          # Simulate a real failure: no stdout, non-zero exit.
+          echo "oasdiff: spec not found" >&2
+          exit 2
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          mkdir -p /tmp/run
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' '' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output ---"
+          echo "$out"
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 2 ]; then
+            echo "FAIL: expected exit 2 (oasdiff exit propagated), got $rc" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "ERROR: oasdiff exited 2 with no output"; then
+            echo "FAIL: expected the explicit no-output error message" >&2
+            exit 1
+          fi
+          if echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script proceeded past the oasdiff failure; the early-abort branch is missing" >&2
+            exit 1
+          fi
+          echo "PASS"
