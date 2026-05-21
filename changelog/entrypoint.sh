@@ -107,7 +107,13 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     repo="${GITHUB_REPOSITORY#*/}"
     head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
-    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$GITHUB_BASE_REF")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+    # base_sha must be an immutable commit SHA, not the branch name. Using
+    # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
+    # advances past the file's commit. See breaking/entrypoint.sh for the
+    # full rationale.
+    base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+    if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
+    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these API changes → ${free_review_url}"
     echo "### 📋 [Review & approve these API changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
 else
