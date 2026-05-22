@@ -77,9 +77,24 @@ repo="${GITHUB_REPOSITORY#*/}"
 
 # Emit free review annotation (public repos only — no auth required)
 urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-# Strip git ref prefix (e.g. "origin/main:path.yaml" -> "path.yaml", "HEAD:path.yaml" -> "path.yaml")
-base_path=$(echo "$base" | sed 's/.*://')
-rev_path=$(echo "$revision" | sed 's/.*://')
+# Resolve the on-disk / on-repo path portion of `base` and `revision` for
+# the free /review URL. Two input shapes are supported:
+#
+#   1. Git-ref form  — "origin/main:openapi.yaml" or "HEAD:openapi.yaml".
+#      The sed strips everything up to the colon so we keep just the path.
+#   2. URL form      — "https://raw.githubusercontent.com/o/r/main/foo.yaml".
+#      The naive sed would also strip "https:" and leave a broken
+#      "//raw.githubusercontent.com/..." which the /review page then can't
+#      fetch (it renders as the access-denied screen with a misleading
+#      "owner doesn't have access" message). Pass URLs through unchanged.
+strip_ref_prefix() {
+    case "$1" in
+        http://*|https://*) printf '%s' "$1" ;;
+        *)                  printf '%s' "$1" | sed 's/.*://' ;;
+    esac
+}
+base_path=$(strip_ref_prefix "$base")
+rev_path=$(strip_ref_prefix "$revision")
 # Prefer the base SHA over the branch name so the link is commit-pinned.
 # Fall back through `git rev-parse origin/<branch>` before resorting to
 # the branch name itself, so push-event triggers (no pull_request payload)
