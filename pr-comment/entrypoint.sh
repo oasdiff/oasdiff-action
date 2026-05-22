@@ -81,8 +81,16 @@ urlencode() { printf '%s' "$1" | jq -sRr @uri; }
 base_path=$(echo "$base" | sed 's/.*://')
 rev_path=$(echo "$revision" | sed 's/.*://')
 # Prefer the base SHA over the branch name so the link is commit-pinned.
-free_base_sha="${base_sha:-$GITHUB_BASE_REF}"
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${free_base_sha}&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+# Fall back through `git rev-parse origin/<branch>` before resorting to
+# the branch name itself, so push-event triggers (no pull_request payload)
+# also get an immutable SHA in the URL whenever the base branch was
+# fetched into the workspace.
+if [ -n "$base_sha" ]; then
+    free_base_sha="$base_sha"
+else
+    free_base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF")
+fi
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
 # Build the JSON payload
