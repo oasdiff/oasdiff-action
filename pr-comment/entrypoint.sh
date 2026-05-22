@@ -121,10 +121,17 @@ if [ -z "$oasdiff_token" ]; then
     exit 0
 fi
 
-response=$(curl -s -w "\n%{http_code}" -X POST \
+# POST the payload via stdin (`--data-binary @-`) rather than as a
+# `-d` argv value. For specs whose changelog runs into the multi-MB
+# range the assembled payload is also multi-MB; passing it via argv
+# would exceed ARG_MAX and surface as `curl: Argument list too long`,
+# aborting the action exactly like the analogous jq case did at line
+# 89 before the previous fix. `printf` is a shell builtin so the
+# variable never goes through execve.
+response=$(printf '%s' "$payload" | curl -s -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
-    -d "$payload")
+    --data-binary @-)
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
