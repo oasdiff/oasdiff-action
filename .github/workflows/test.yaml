@@ -658,3 +658,95 @@ jobs:
             exit 1
           fi
           echo "PASS"
+
+  pr_comment_curl_handles_large_payload:
+    runs-on: ubuntu-latest
+    name: Test pr-comment curl POST survives a multi-MB payload
+    # Companion to pr_comment_handles_large_payload. The previous test
+    # exercises the jq payload-construction path with an empty
+    # oasdiff_token, which short-circuits past the curl step. This one
+    # exercises the curl step itself by providing a non-empty token and
+    # stubbing both oasdiff (multi-MB changelog source) and curl (verifies
+    # it received the payload via stdin, not via argv). Catches the
+    # regression class where `curl -d "$payload"` puts a multi-MB body on
+    # argv and aborts with `curl: Argument list too long` after the jq
+    # invocation already succeeded — the same ARG_MAX trap one layer
+    # down. The fix pipes the payload through stdin via `--data-binary @-`.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff + curl, run entrypoint with a fake token
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          # Same filler strategy as the jq test: dd | tr produces a
+          # ~2 MB string of 'a' characters and exits 0 cleanly under
+          # pipefail.
+          dd if=/dev/zero bs=1024 count=2000 status=none | tr '\0' 'a' > /tmp/filler
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          filler=$(cat /tmp/filler)
+          printf '[{"id":"big-1","text":"%s","level":3},{"id":"big-2","text":"%s","level":3}]' "$filler" "$filler"
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # Stub curl: consume the POST body from stdin, record its
+          # byte count to a side file the assertions below can read,
+          # and emit the success-response shape the entrypoint expects
+          # from `-s -w "\n%{http_code}"` (body then a newline then the
+          # HTTP status code).
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          body=$(cat)
+          printf '%s' "$body" | wc -c > /tmp/run/curl-bytes
+          printf '{"review_token":"stub-token-uuid"}\n200\n'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          # Note: jq must remain the system jq (not stubbed). PATH puts
+          # our stubs first; we only override `oasdiff` and `curl`.
+          export PATH=/tmp/stub:$PATH
+
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' 'stub-oasdiff-token' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output (truncated) ---"
+          echo "$out" | head -c 2000
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: expected exit 0, got $rc" >&2
+            if echo "$out" | grep -q "curl: Argument list too long"; then
+              echo "The regression has returned: \$payload is being passed via curl argv (-d) instead of stdin (--data-binary @-)." >&2
+            fi
+            exit 1
+          fi
+          if [ ! -f /tmp/run/curl-bytes ]; then
+            echo "FAIL: curl stub was never invoked; script aborted before reaching the POST" >&2
+            exit 1
+          fi
+          curl_bytes=$(cat /tmp/run/curl-bytes | tr -d ' ')
+          echo "curl received: ${curl_bytes} bytes"
+          if [ "$curl_bytes" -lt 4000000 ]; then
+            echo "FAIL: curl stub received only ${curl_bytes} bytes; expected >4 MB (proves payload made it through stdin)" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script aborted before emitting the review-page notice" >&2
+            exit 1
+          fi
+          echo "PASS"
