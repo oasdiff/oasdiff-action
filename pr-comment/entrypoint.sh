@@ -93,8 +93,17 @@ fi
 free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
-# Build the JSON payload
-payload=$(jq -n \
+# Build the JSON payload. The `changes` array can be very large for
+# complex specs (one real-world report was observed at thousands of
+# entries running into the megabytes), so it's piped via stdin rather
+# than passed as a `--argjson` value. `--argjson` would put the entire
+# JSON string on jq's command line, exceeding the OS argument-length
+# limit (ARG_MAX, typically 128KB to 2MB depending on the kernel),
+# which surfaces as a confusing "jq: Argument list too long" error
+# that aborts the action right before the POST to oasdiff-service.
+# `printf` is a shell builtin in POSIX sh / busybox ash so its
+# arguments don't go through execve and aren't subject to ARG_MAX.
+payload=$(printf '%s' "$changes" | jq \
     --arg token "$github_token" \
     --arg owner "$owner" \
     --arg repo "$repo" \
@@ -104,8 +113,7 @@ payload=$(jq -n \
     --arg base_sha "$base_sha" \
     --arg base_file "$base" \
     --arg rev_file "$revision" \
-    --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref, base_sha: $base_sha}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref, base_sha: $base_sha}, base_file: $base_file, rev_file: $rev_file, changes: .}')
 
 # POST to oasdiff-service (requires token)
 if [ -z "$oasdiff_token" ]; then
