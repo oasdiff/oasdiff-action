@@ -581,3 +581,80 @@ jobs:
             exit 1
           fi
           echo "PASS"
+
+  pr_comment_handles_large_payload:
+    runs-on: ubuntu-latest
+    name: Test pr-comment jq payload survives a multi-MB changes array
+    # Regression test for the jq argv ARG_MAX limit. Real-world specs can
+    # produce changelogs in the multi-MB range; the original implementation
+    # passed `$changes` via `jq --argjson changes "$changes"` which put the
+    # entire JSON string on jq's command line and exceeded ARG_MAX (typical
+    # Linux ceiling is 2 MB), surfacing as `jq: Argument list too long` and
+    # aborting the action right before the service POST. The fix pipes the
+    # changes payload via stdin instead. This job stubs oasdiff to emit a
+    # ~4 MB changelog and asserts the entrypoint reaches the no-token skip
+    # without aborting, which proves the jq invocation processed the
+    # payload successfully.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to emit a multi-MB changelog
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+
+          # Pre-build a ~2 MB filler string to embed inside two synthetic
+          # change entries (~4 MB total payload, well above the 2 MB Linux
+          # ARG_MAX ceiling). dd reads a bounded number of zero bytes and
+          # exits 0 cleanly, then tr converts to 'a's. We avoid `yes ... |
+          # head -c N` because `head` closes the pipe and `yes` exits with
+          # SIGPIPE, which fails under `set -o pipefail`.
+          dd if=/dev/zero bs=1024 count=2000 status=none | tr '\0' 'a' > /tmp/filler
+          filler_size=$(wc -c < /tmp/filler)
+          echo "filler size: ${filler_size} bytes"
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          # Emit a synthetic JSON changelog totalling >4 MB. printf is a
+          # POSIX builtin so neither the variable assignment via $(cat ...)
+          # nor the final printf '%s' "$json" goes through execve.
+          filler=$(cat /tmp/filler)
+          printf '[{"id":"big-1","text":"%s","level":3},{"id":"big-2","text":"%s","level":3}]' "$filler" "$filler"
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          mkdir -p /tmp/run
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' '' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output (truncated) ---"
+          echo "$out" | head -c 2000
+          echo "--- exit code: $rc ---"
+
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: expected exit 0 (script should reach the no-token skip after building the JSON payload), got $rc" >&2
+            echo "If the message contains 'jq: Argument list too long', the regression has returned: \$changes is being passed via argv (--argjson) instead of stdin." >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
+            echo "FAIL: script aborted before emitting the review-page notice" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "No oasdiff-token provided"; then
+            echo "FAIL: script aborted before reaching the no-token skip; the jq payload-construction step likely blew up on the multi-MB changes array" >&2
+            exit 1
+          fi
+          echo "PASS"
