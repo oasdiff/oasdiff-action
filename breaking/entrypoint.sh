@@ -136,11 +136,14 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these breaking changes → ${free_review_url}"
     echo "### 📋 [Review & approve these breaking changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-    echo "review_url=${free_review_url}" >> "$GITHUB_OUTPUT"
 else
     write_output "No breaking changes"
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+# review_url is a single-line output, written after the multiline `breaking`
+# block is closed so it doesn't get folded into that value. Empty when there
+# are no breaking changes (the notice/URL only fire then).
+echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
 
 exit $exit_code
