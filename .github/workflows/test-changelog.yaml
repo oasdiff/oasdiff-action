@@ -1,4 +1,4 @@
-name: 'Test oasdiff changelog action'
+name: changelog
 on:
   pull_request:
   push:
