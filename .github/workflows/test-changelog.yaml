@@ -90,106 +90,64 @@ jobs:
   changelog_free_review_url_preserves_https_base:
     runs-on: ubuntu-latest
     name: Test changelog free review URL keeps the https:// scheme on URL-style base
-    # Regression test for the bug class fixed in pr-comment (#120): a
-    # URL-shaped base must survive intact in the free /review link rather
-    # than being mangled to "//raw.github..." by the naive ref-prefix strip.
+    # Regression test for the bug fixed in pr-comment (#120): a URL-shaped base
+    # must survive intact in the review URL's base_file. Runs the real action in
+    # its Alpine container (the production platform) and asserts on the
+    # review_url output.
     steps:
       - uses: actions/checkout@v6
-      - name: Stub oasdiff to report a change so the notice fires
+      - uses: ./changelog
+        id: clog
+        with:
+          base: 'https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml'
+          revision: 'https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml'
+      - name: Assert the full https:// URL is preserved in base_file
+        env:
+          REVIEW_URL: ${{ steps.clog.outputs.review_url }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/stub
-          cat > /tmp/stub/oasdiff <<'STUB'
-          #!/bin/sh
-          echo '1 change(s)'
-          STUB
-          chmod +x /tmp/stub/oasdiff
-
-          mkdir -p /tmp/run
-          export GITHUB_REPOSITORY=oasdiff-test/test
-          export GITHUB_SHA=deadbeef
-          export GITHUB_BASE_REF=main
-          export GITHUB_OUTPUT=/tmp/run/github-output
-          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
-          cat > /tmp/run/event.json <<EVT
-          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
-          EVT
-          export GITHUB_EVENT_PATH=/tmp/run/event.json
-
-          export PATH=/tmp/stub:$PATH
-          base_url='https://raw.githubusercontent.com/oasdiff-test/test/main/simple.yaml'
-          # Invoke with bash: the entrypoint's #!/bin/sh is dash on the runner,
-          # which rejects `set -o pipefail` (exit 2). In production it runs under
-          # the container's busybox ash, which supports it.
-          out=$(bash ./changelog/entrypoint.sh \
-            "$base_url" 'simple.yaml' \
-            '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
-          echo "--- entrypoint output ---"
-          echo "$out"
-
-          if ! echo "$out" | grep -q "::notice::.*API changes"; then
-            echo "FAIL: review-URL notice line missing" >&2
+          echo "review_url=$REVIEW_URL"
+          if [ -z "$REVIEW_URL" ]; then
+            echo "FAIL: review_url output is empty (expected changes to fire the notice)" >&2
             exit 1
           fi
-          notice=$(echo "$out" | grep "::notice::.*API changes")
-          if echo "$notice" | grep -q 'base_file=https%3A%2F%2Fraw.githubusercontent.com'; then
+          if printf '%s' "$REVIEW_URL" | grep -q 'base_file=https%3A%2F%2Fraw.githubusercontent.com'; then
             echo "PASS: full https://raw... URL preserved in base_file"
-          elif echo "$notice" | grep -q 'base_file=%2F%2Fraw.githubusercontent.com'; then
+          elif printf '%s' "$REVIEW_URL" | grep -q 'base_file=%2F%2Fraw.githubusercontent.com'; then
             echo "FAIL: 'https:' was stripped from base, the strip_ref_prefix URL guard is missing" >&2
-            echo "notice line: $notice" >&2
             exit 1
           else
-            echo "FAIL: base_file= param did not contain the raw.githubusercontent.com host as expected" >&2
-            echo "notice line: $notice" >&2
+            echo "FAIL: base_file= did not contain the raw.githubusercontent.com host as expected" >&2
             exit 1
           fi
 
   changelog_free_review_url_strips_git_ref_prefix:
     runs-on: ubuntu-latest
-    name: "Test changelog free review URL strips origin/main: prefix from git-ref base"
-    # Companion: git-ref base must have its prefix stripped to a bare path.
+    name: "Test changelog free review URL strips the ref: prefix from a git-ref base"
+    # Companion to the preserve test: a git-ref base (HEAD:specs/base.yaml) must
+    # have its ref prefix stripped so base_file is just the path. Also exercises
+    # real git-ref resolution, the action's recommended base form.
     steps:
       - uses: actions/checkout@v6
-      - name: Stub oasdiff to report a change so the notice fires
+      - uses: ./changelog
+        id: clog
+        with:
+          base: 'HEAD:specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert the git-ref prefix is stripped from base_file
+        env:
+          REVIEW_URL: ${{ steps.clog.outputs.review_url }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/stub
-          cat > /tmp/stub/oasdiff <<'STUB'
-          #!/bin/sh
-          echo '1 change(s)'
-          STUB
-          chmod +x /tmp/stub/oasdiff
-
-          mkdir -p /tmp/run
-          export GITHUB_REPOSITORY=foo/bar
-          export GITHUB_SHA=deadbeef
-          export GITHUB_BASE_REF=main
-          export GITHUB_OUTPUT=/tmp/run/github-output
-          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
-          cat > /tmp/run/event.json <<EVT
-          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
-          EVT
-          export GITHUB_EVENT_PATH=/tmp/run/event.json
-
-          export PATH=/tmp/stub:$PATH
-          # Invoke with bash (see the companion job): dash on the runner rejects
-          # the entrypoint's `set -o pipefail`.
-          out=$(bash ./changelog/entrypoint.sh \
-            'origin/main:multi-file/openapi.yaml' 'HEAD:multi-file/openapi.yaml' \
-            '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
-          echo "--- entrypoint output ---"
-          echo "$out"
-
-          if ! echo "$out" | grep -q "::notice::.*API changes"; then
-            echo "FAIL: review-URL notice line missing" >&2
+          echo "review_url=$REVIEW_URL"
+          if [ -z "$REVIEW_URL" ]; then
+            echo "FAIL: review_url output is empty (expected changes to fire the notice)" >&2
             exit 1
           fi
-          notice=$(echo "$out" | grep "::notice::.*API changes")
-          if echo "$notice" | grep -q 'base_file=multi-file%2Fopenapi.yaml'; then
-            echo "PASS: origin/main: prefix stripped from base"
+          if printf '%s' "$REVIEW_URL" | grep -q 'base_file=specs%2Fbase.yaml'; then
+            echo "PASS: ref prefix stripped from base"
           else
-            echo "FAIL: base_file= did not have the git-ref prefix stripped" >&2
-            echo "notice line: $notice" >&2
+            echo "FAIL: base_file= did not have the git-ref prefix stripped (got: $REVIEW_URL)" >&2
             exit 1
           fi
 

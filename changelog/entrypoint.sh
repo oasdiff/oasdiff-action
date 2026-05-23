@@ -79,8 +79,6 @@ if [ -n "$level" ]; then
 fi
 echo "flags: $flags"
 
-set -o pipefail
-
 # *** github action step output ***
 
 # output name should be in the syntax of multiple lines:
@@ -119,8 +117,10 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
     # base_sha must be an immutable commit SHA, not the branch name. Using
     # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
-    # advances past the file's commit. See breaking/entrypoint.sh for the
-    # full rationale.
+    # advances past the file's commit, e.g. someone merges a rename of the
+    # spec file and every previously-emitted /review URL starts 404'ing
+    # because raw.githubusercontent.com now resolves the branch to a newer
+    # commit where the file lives at a different path.
     base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
@@ -131,6 +131,10 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+# review_url is a single-line output, written after the multiline `changelog`
+# block is closed so it doesn't get folded into that value. Empty when there
+# are no changes (the notice/URL only fire then).
+echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
 
 # *** github action step output ***
 
