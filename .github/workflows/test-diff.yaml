@@ -1,4 +1,4 @@
-name: 'Test oasdiff diff action'
+name: diff
 on:
   pull_request:
   push:
