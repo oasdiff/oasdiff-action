@@ -273,3 +273,108 @@ jobs:
             exit 1
           fi
 
+  breaking_free_review_url_preserves_https_base:
+    runs-on: ubuntu-latest
+    name: Test breaking free review URL keeps the https:// scheme on URL-style base
+    # Regression test for the bug class fixed in pr-comment (#120): the naive
+    # base_path=$(echo "$base" | sed 's/.*://') strips "https:" from a
+    # URL-shaped base and leaves a broken "//raw.github..." in the free
+    # /review link, which the page renders as a misleading access-denied
+    # screen. The strip_ref_prefix helper passes URLs through unchanged.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to report a change so the notice fires
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          echo '1 breaking change(s)'
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          mkdir -p /tmp/run
+          export GITHUB_REPOSITORY=oasdiff-test/test
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_OUTPUT=/tmp/run/github-output
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          base_url='https://raw.githubusercontent.com/oasdiff-test/test/main/simple.yaml'
+          out=$(./breaking/entrypoint.sh \
+            "$base_url" 'simple.yaml' \
+            '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
+          echo "--- entrypoint output ---"
+          echo "$out"
+
+          if ! echo "$out" | grep -q "::notice::.*breaking changes"; then
+            echo "FAIL: review-URL notice line missing" >&2
+            exit 1
+          fi
+          notice=$(echo "$out" | grep "::notice::.*breaking changes")
+          if echo "$notice" | grep -q 'base_file=https%3A%2F%2Fraw.githubusercontent.com'; then
+            echo "PASS: full https://raw... URL preserved in base_file"
+          elif echo "$notice" | grep -q 'base_file=%2F%2Fraw.githubusercontent.com'; then
+            echo "FAIL: 'https:' was stripped from base, the strip_ref_prefix URL guard is missing" >&2
+            echo "notice line: $notice" >&2
+            exit 1
+          else
+            echo "FAIL: base_file= param did not contain the raw.githubusercontent.com host as expected" >&2
+            echo "notice line: $notice" >&2
+            exit 1
+          fi
+
+  breaking_free_review_url_strips_git_ref_prefix:
+    runs-on: ubuntu-latest
+    name: "Test breaking free review URL strips origin/main: prefix from git-ref base"
+    # Companion to breaking_free_review_url_preserves_https_base: a git-ref
+    # base (origin/main:openapi.yaml) must still have its prefix stripped so
+    # the /review page receives just the path.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff to report a change so the notice fires
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          echo '1 breaking change(s)'
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          mkdir -p /tmp/run
+          export GITHUB_REPOSITORY=foo/bar
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_OUTPUT=/tmp/run/github-output
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          out=$(./breaking/entrypoint.sh \
+            'origin/main:multi-file/openapi.yaml' 'HEAD:multi-file/openapi.yaml' \
+            '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
+          echo "--- entrypoint output ---"
+          echo "$out"
+
+          if ! echo "$out" | grep -q "::notice::.*breaking changes"; then
+            echo "FAIL: review-URL notice line missing" >&2
+            exit 1
+          fi
+          notice=$(echo "$out" | grep "::notice::.*breaking changes")
+          if echo "$notice" | grep -q 'base_file=multi-file%2Fopenapi.yaml'; then
+            echo "PASS: origin/main: prefix stripped from base"
+          else
+            echo "FAIL: base_file= did not have the git-ref prefix stripped" >&2
+            echo "notice line: $notice" >&2
+            exit 1
+          fi
+
