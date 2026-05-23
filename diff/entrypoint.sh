@@ -73,8 +73,6 @@ echo "flags: $flags"
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "diff<<$delimiter" >>"$GITHUB_OUTPUT"
 
-set -o pipefail
-
 # Capture the exit code from oasdiff command while still getting the output
 exit_code=0
 if [ -n "$flags" ]; then

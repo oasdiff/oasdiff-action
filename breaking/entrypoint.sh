@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-set -o pipefail
 
 if [ -n "$GITHUB_WORKSPACE" ]; then
   git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \

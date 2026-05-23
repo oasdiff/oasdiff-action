@@ -79,8 +79,6 @@ if [ -n "$level" ]; then
 fi
 echo "flags: $flags"
 
-set -o pipefail
-
 # *** github action step output ***
 
 # output name should be in the syntax of multiple lines:
