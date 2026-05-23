@@ -109,8 +109,18 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
     # Emit upgrade notice pointing to the free review page
     urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-    base_path=$(echo "$base" | sed 's/.*://')
-    rev_path=$(echo "$revision" | sed 's/.*://')
+    # Strip the git-ref prefix ("origin/main:openapi.yaml" -> "openapi.yaml")
+    # but pass http(s):// URLs through unchanged. A naive `sed 's/.*://'` would
+    # also eat "https:" and emit a broken "//host/..." that the /review page
+    # can't fetch (it renders the misleading access-denied screen).
+    strip_ref_prefix() {
+        case "$1" in
+            http://*|https://*) printf '%s' "$1" ;;
+            *)                  printf '%s' "$1" | sed 's/.*://' ;;
+        esac
+    }
+    base_path=$(strip_ref_prefix "$base")
+    rev_path=$(strip_ref_prefix "$revision")
     owner="${GITHUB_REPOSITORY%%/*}"
     repo="${GITHUB_REPOSITORY#*/}"
     head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")

@@ -1,0 +1,119 @@
+name: 'Test oasdiff diff action'
+on:
+  pull_request:
+  push:
+jobs:
+  oasdiff_diff:
+    runs-on: ubuntu-latest
+    name: Test diff action
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running diff action
+        id: test_ete
+        uses: ./diff
+        with:
+          base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
+          revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
+          format: 'text'
+          output-to-file: 'diff.txt'
+      - name: Test diff action output to file
+        run: |
+          if [ ! -s diff.txt ]; then
+            echo "Diff file doesn't exist or is empty"
+            exit 1
+          fi
+  oasdiff_diff_exclude_elements:
+    runs-on: ubuntu-latest
+    name: Test diff action with exclude-elements option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v6
+        - name: Running diff action with exclude-elements option
+          id: test_exclude_elements
+          uses: ./diff
+          with:
+            base: 'specs/base.yaml'
+            revision: 'specs/base-exclude-elements.yaml'
+            format: 'text'
+            exclude-elements: 'description,title,summary'
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_exclude_elements.outputs.diff }}
+            $delimiter
+            )
+            if [ "$output" != "No changes" ]; then
+              echo "Expected output 'No changes' but got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_diff_composed:
+    runs-on: ubuntu-latest
+    name: Test diff action with composed option
+    steps:
+        - name: checkout
+          uses: actions/checkout@v6
+        - name: Running diff action with composed option
+          id: test_composed
+          uses: ./diff
+          with:
+            base: 'specs/glob/base/*.yaml'
+            revision: 'specs/glob/revision/*.yaml'
+            format: 'text'
+            composed: true
+        - name: Test diff action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_composed.outputs.diff }}
+            $delimiter
+            )
+            if [[ ! "$output" =~ "Deleted Endpoints: 1" ]]; then
+              echo "Expected 'Deleted Endpoints: 1' to be modified in diff, instead got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_diff_yaml_config_exclude_elements:
+    runs-on: ubuntu-latest
+    name: Test diff action picks up exclude-elements from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          exclude-elements:
+            - description
+            - title
+            - summary
+          format: text
+          EOF
+      - name: Running diff action without exclude-elements input
+        id: test_yaml_exclude_elements
+        uses: ./diff
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/base-exclude-elements.yaml'
+      - name: Assert diff is empty thanks to exclude-elements from .oasdiff.yaml
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_exclude_elements.outputs.diff }}
+          $delimiter
+          )
+          if [ "$output" != "No changes" ]; then
+            echo "Expected 'No changes' (exclude-elements from .oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------
+  # pr-comment entrypoint: oasdiff exit-code tolerance.
+  #
+  # The pr-comment script wraps the oasdiff changelog invocation so a
+  # non-zero exit (e.g. fail-on triggered from .oasdiff.yaml) does not
+  # abort the script under set -e. Real failures (no output) still
+  # abort. These two jobs run pr-comment/entrypoint.sh directly with a
+  # stubbed oasdiff on PATH so we don't need a Docker image, an
+  # oasdiff-token, or a reachable oasdiff-service.
+  # ---------------------------------------------------------------------
+
