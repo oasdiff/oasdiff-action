@@ -55,6 +55,8 @@ inputs:
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
+  review_url:
+    description: 'URL of the free oasdiff review page for these changes (empty when there are no breaking changes)'
 runs:
   using: 'docker'
   image: 'Dockerfile'

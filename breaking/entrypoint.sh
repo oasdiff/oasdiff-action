@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+set -o pipefail
 
 if [ -n "$GITHUB_WORKSPACE" ]; then
   git config --global --get-all safe.directory | grep -q "$GITHUB_WORKSPACE" || \
@@ -22,23 +23,22 @@ readonly warn_ignore="${13}"
 readonly output_to_file="${14}"
 
 write_output () {
-    _write_output_output="$1"
+    local output="$1"
     if [ -n "$output_to_file" ]; then
-        _write_output_file_output="$2"
-        if [ -z "$_write_output_file_output" ]; then
-            _write_output_file_output=$_write_output_output
-
+        local file_output="$2"
+        if [ -z "$file_output" ]; then
+            file_output=$output
         fi
-        echo "$_write_output_file_output" >> "$output_to_file"
+        echo "$file_output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
-    size=$(echo "$_write_output_output" | wc -c)
+    size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
-        _write_output_output=$(echo "$_write_output_output" | head -c 1000000)
+        output=$(echo "$output" | head -c 1000000)
     fi
-    echo "$_write_output_output" >>"$GITHUB_OUTPUT"
+    echo "$output" >>"$GITHUB_OUTPUT"
 }
 
 echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, err_ignore: $err_ignore, warn_ignore: $warn_ignore, output_to_file: $output_to_file"
@@ -127,7 +127,7 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
     # base_sha must be an immutable commit SHA, not the branch name. Using
     # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
-    # advances past the file's commit — e.g. someone merges a rename of the
+    # advances past the file's commit, e.g. someone merges a rename of the
     # spec file and every previously-emitted /review URL starts 404'ing
     # because raw.githubusercontent.com now resolves the branch to a newer
     # commit where the file lives at a different path.
@@ -136,6 +136,7 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these breaking changes → ${free_review_url}"
     echo "### 📋 [Review & approve these breaking changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+    echo "review_url=${free_review_url}" >> "$GITHUB_OUTPUT"
 else
     write_output "No breaking changes"
 fi
