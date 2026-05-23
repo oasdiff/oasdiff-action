@@ -1,4 +1,4 @@
-name: 'Test oasdiff pr-comment action'
+name: pr-comment
 on:
   pull_request:
   push:

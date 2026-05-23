@@ -1,4 +1,4 @@
-name: 'Test oasdiff breaking action'
+name: breaking
 on:
   pull_request:
   push:
