@@ -118,7 +118,10 @@ jobs:
 
           export PATH=/tmp/stub:$PATH
           base_url='https://raw.githubusercontent.com/oasdiff-test/test/main/simple.yaml'
-          out=$(./changelog/entrypoint.sh \
+          # Invoke with bash: the entrypoint's #!/bin/sh is dash on the runner,
+          # which rejects `set -o pipefail` (exit 2). In production it runs under
+          # the container's busybox ash, which supports it.
+          out=$(bash ./changelog/entrypoint.sh \
             "$base_url" 'simple.yaml' \
             '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
           echo "--- entrypoint output ---"
@@ -169,7 +172,9 @@ jobs:
           export GITHUB_EVENT_PATH=/tmp/run/event.json
 
           export PATH=/tmp/stub:$PATH
-          out=$(./changelog/entrypoint.sh \
+          # Invoke with bash (see the companion job): dash on the runner rejects
+          # the entrypoint's `set -o pipefail`.
+          out=$(bash ./changelog/entrypoint.sh \
             'origin/main:multi-file/openapi.yaml' 'HEAD:multi-file/openapi.yaml' \
             '' '' '' '' '' '' '' '' '' '' '' '' 2>&1)
           echo "--- entrypoint output ---"
