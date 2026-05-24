@@ -1,0 +1,341 @@
+name: breaking
+on:
+  pull_request:
+  push:
+jobs:
+  oasdiff_breaking:
+    runs-on: ubuntu-latest
+    name: Test breaking changes
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running breaking action
+        id: test_breaking_changes
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          output-to-file: 'breaking.txt'
+      - name: Test breaking changes action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
+            exit 1
+          fi
+      - name: Test breaking changes action output to file
+        run: |
+          if [ ! -s breaking.txt ]; then
+            echo "Breaking changes file doesn't exist or is empty"
+            exit 1
+          fi
+          output=$(cat breaking.txt | head -n 1)
+          if [[  "${output}" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '${output}'" >&2
+            exit 1
+          fi
+  oasdiff_breaking_fail_on:
+    runs-on: ubuntu-latest
+    name: Test fail on breaking changes
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "2 changes: 0 error, 2 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running breaking action
+        id: test_breaking_changes
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking-warn.yaml'
+          output-to-file: 'breaking.txt'
+          fail-on: 'ERR'
+      - name: Test breaking changes action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_changes.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
+            exit 1
+          fi
+      - name: Test breaking changes action output to file
+        run: |
+          if [ ! -s breaking.txt ]; then
+            echo "Breaking changes file doesn't exist or is empty"
+            exit 1
+          fi
+          output=$(cat breaking.txt | head -n 1)
+          if [[  "${output}" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '${output}'" >&2
+            exit 1
+          fi
+  oasdiff_breaking_matching_delimiter_not_found:
+      runs-on: ubuntu-latest
+      name: Test breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
+      env:
+        OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "9 changes: 6 error, 3 warning, 0 info"
+      steps:
+        - name: checkout
+          uses: actions/checkout@v6
+        - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
+          id: test_breaking_changes_matching_delimiter_not_found
+          uses: ./breaking
+          with:
+            base: 'specs/petstore-base.yaml'
+            revision: 'specs/petstore-revision.yaml'
+        - name: Test breaking changes action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_breaking_changes_matching_delimiter_not_found.outputs.breaking }}
+            $delimiter
+            )
+            if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+              echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_breaking_composed:
+    runs-on: ubuntu-latest
+    name: Test breaking action with composed option
+    env:
+        OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+        - name: checkout
+          uses: actions/checkout@v6
+        - name: Running breaking action with composed option
+          id: test_breaking_composed
+          uses: ./breaking
+          with:
+            base: 'specs/glob/base/*.yaml'
+            revision: 'specs/glob/revision/*.yaml'
+            composed: true
+        - name: Test breaking action output
+          run: |
+            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+            output=$(cat <<-$delimiter
+            ${{ steps.test_breaking_composed.outputs.breaking }}
+            $delimiter
+            )
+            if [[ ! "$output" =~ "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]]; then
+              echo "Expected '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT', instead got '$output'" >&2
+              exit 1
+            fi
+  oasdiff_breaking_deprecation:
+    runs-on: ubuntu-latest
+    name: Test breaking changes with deprecation
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Set date for deprecated specs
+        run: |
+          # Deprecate Beta in 14 days
+          sed -ie "s/{{SUNSET_DATE_BETA}}/$(date --date="14 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+          # Deprecate Stable in 21 days
+          sed -ie "s/{{SUNSET_DATE_STABLE}}/$(date --date="21 day" "+%Y-%m-%d")/" specs/base-deprecation.yaml
+      - name: Running OpenAPI Spec check breaking action
+        id: test_breaking_deprecations
+        uses: ./breaking
+        with:
+          base: specs/base.yaml
+          revision: specs/base-deprecation.yaml
+          deprecation-days-beta: 14
+          deprecation-days-stable: 21
+  oasdiff_breaking_flatten_allof:
+    runs-on: ubuntu-latest
+    name: Test breaking action with flatten-allof option
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running breaking action with flatten-allof option
+        id: test_breaking_flatten_allof
+        uses: ./breaking
+        with:
+          base: 'specs/base-allof.yaml'
+          revision: 'specs/revision-allof.yaml'
+          flatten-allof: true
+      - name: Test breaking action output
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_flatten_allof.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' but got '$output'" >&2
+            exit 1
+          fi
+  oasdiff_breaking_err_ignore:
+    runs-on: ubuntu-latest
+    name: Test breaking action with err-ignore option
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running breaking action with err-ignore option
+        id: test_breaking_err_ignore
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          err-ignore: 'specs/err-ignore.txt'
+      - name: Test breaking changes are suppressed
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_breaking_err_ignore.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "No breaking changes" ]; then
+            echo "Expected 'No breaking changes' but got '$output'" >&2
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------
+  # .oasdiff.yaml config-file support — verify all three free actions
+  # pick up .oasdiff.yaml from the repo root automatically (via the CLI's
+  # cwd-based config-file lookup; the runner mounts $GITHUB_WORKSPACE as
+  # the container's WORKDIR).
+  # ---------------------------------------------------------------------
+
+  oasdiff_breaking_yaml_config_fail_on:
+    runs-on: ubuntu-latest
+    name: Test breaking action picks up fail-on from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          fail-on: ERR
+          EOF
+      - name: Running breaking action without fail-on input
+        id: test_yaml_fail_on
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert action failed (.oasdiff.yaml fail-on triggered) and report rendered
+        run: |
+          if [ "${{ steps.test_yaml_fail_on.outcome }}" != "failure" ]; then
+            echo "Expected action to fail because .oasdiff.yaml sets fail-on: ERR and the spec has an ERR-level breaking change. Got outcome: ${{ steps.test_yaml_fail_on.outcome }}" >&2
+            exit 1
+          fi
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_fail_on.outputs.breaking }}
+          $delimiter
+          )
+          # Even when fail-on triggers, the entrypoint should still render
+          # the report. Check that the breaking output is non-empty and
+          # matches the same shape as a normal fail-on-input run.
+          if [ "$output" != "1 changes: 1 error, 0 warning, 0 info" ]; then
+            echo "Expected '1 changes: 1 error, 0 warning, 0 info' to be rendered alongside fail-on, got: '$output'" >&2
+            exit 1
+          fi
+
+  oasdiff_breaking_yaml_config_err_ignore:
+    runs-on: ubuntu-latest
+    name: Test breaking action picks up err-ignore from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          err-ignore: specs/err-ignore.txt
+          EOF
+      - name: Running breaking action without err-ignore input
+        id: test_yaml_err_ignore
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert breaking changes were suppressed by .oasdiff.yaml
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_err_ignore.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "No breaking changes" ]; then
+            echo "Expected 'No breaking changes' (err-ignore from .oasdiff.yaml should suppress findings) but got '$output'" >&2
+            exit 1
+          fi
+
+  breaking_free_review_url_preserves_https_base:
+    runs-on: ubuntu-latest
+    name: Test breaking free review URL keeps the https:// scheme on URL-style base
+    # Regression test for the bug fixed in pr-comment (#120): a URL-shaped base
+    # must survive intact in the review URL's base_file, not be mangled to
+    # "//raw.github..." by the git-ref-prefix strip. Runs the real action in its
+    # Alpine container (the production platform) and asserts on the review_url
+    # output. openapi-test1 -> openapi-test3 has breaking changes, so the notice
+    # (and review_url) fire.
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./breaking
+        id: brk
+        with:
+          base: 'https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml'
+          revision: 'https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml'
+      - name: Assert the full https:// URL is preserved in base_file
+        env:
+          REVIEW_URL: ${{ steps.brk.outputs.review_url }}
+        run: |
+          set -euo pipefail
+          echo "review_url=$REVIEW_URL"
+          if [ -z "$REVIEW_URL" ]; then
+            echo "FAIL: review_url output is empty (expected breaking changes to fire the notice)" >&2
+            exit 1
+          fi
+          if printf '%s' "$REVIEW_URL" | grep -q 'base_file=https%3A%2F%2Fraw.githubusercontent.com'; then
+            echo "PASS: full https://raw... URL preserved in base_file"
+          elif printf '%s' "$REVIEW_URL" | grep -q 'base_file=%2F%2Fraw.githubusercontent.com'; then
+            echo "FAIL: 'https:' was stripped from base, the strip_ref_prefix URL guard is missing" >&2
+            exit 1
+          else
+            echo "FAIL: base_file= did not contain the raw.githubusercontent.com host as expected" >&2
+            exit 1
+          fi
+
+  breaking_free_review_url_strips_git_ref_prefix:
+    runs-on: ubuntu-latest
+    name: "Test breaking free review URL strips the ref: prefix from a git-ref base"
+    # Companion to the preserve test: a git-ref base (HEAD:specs/base.yaml) must
+    # have its ref prefix stripped so base_file is just the path. Also exercises
+    # real git-ref resolution, the action's recommended base form.
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./breaking
+        id: brk
+        with:
+          base: 'HEAD:specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert the git-ref prefix is stripped from base_file
+        env:
+          REVIEW_URL: ${{ steps.brk.outputs.review_url }}
+        run: |
+          set -euo pipefail
+          echo "review_url=$REVIEW_URL"
+          if [ -z "$REVIEW_URL" ]; then
+            echo "FAIL: review_url output is empty (expected breaking changes to fire the notice)" >&2
+            exit 1
+          fi
+          if printf '%s' "$REVIEW_URL" | grep -q 'base_file=specs%2Fbase.yaml'; then
+            echo "PASS: ref prefix stripped from base"
+          else
+            echo "FAIL: base_file= did not have the git-ref prefix stripped (got: $REVIEW_URL)" >&2
+            exit 1
+          fi
+

@@ -22,23 +22,22 @@ readonly warn_ignore="${13}"
 readonly output_to_file="${14}"
 
 write_output () {
-    _write_output_output="$1"
+    local output="$1"
     if [ -n "$output_to_file" ]; then
-        _write_output_file_output="$2"
-        if [ -z "$_write_output_file_output" ]; then
-            _write_output_file_output=$_write_output_output
-
+        local file_output="$2"
+        if [ -z "$file_output" ]; then
+            file_output=$output
         fi
-        echo "$_write_output_file_output" >> "$output_to_file"
+        echo "$file_output" >> "$output_to_file"
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
-    size=$(echo "$_write_output_output" | wc -c)
+    size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
-        _write_output_output=$(echo "$_write_output_output" | head -c 1000000)
+        output=$(echo "$output" | head -c 1000000)
     fi
-    echo "$_write_output_output" >>"$GITHUB_OUTPUT"
+    echo "$output" >>"$GITHUB_OUTPUT"
 }
 
 echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, err_ignore: $err_ignore, warn_ignore: $warn_ignore, output_to_file: $output_to_file"
@@ -109,13 +108,31 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
     # Emit upgrade notice pointing to the free review page
     urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-    base_path=$(echo "$base" | sed 's/.*://')
-    rev_path=$(echo "$revision" | sed 's/.*://')
+    # Strip the git-ref prefix ("origin/main:openapi.yaml" -> "openapi.yaml")
+    # but pass http(s):// URLs through unchanged. A naive `sed 's/.*://'` would
+    # also eat "https:" and emit a broken "//host/..." that the /review page
+    # can't fetch (it renders the misleading access-denied screen).
+    strip_ref_prefix() {
+        case "$1" in
+            http://*|https://*) printf '%s' "$1" ;;
+            *)                  printf '%s' "$1" | sed 's/.*://' ;;
+        esac
+    }
+    base_path=$(strip_ref_prefix "$base")
+    rev_path=$(strip_ref_prefix "$revision")
     owner="${GITHUB_REPOSITORY%%/*}"
     repo="${GITHUB_REPOSITORY#*/}"
     head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
-    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$GITHUB_BASE_REF")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+    # base_sha must be an immutable commit SHA, not the branch name. Using
+    # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
+    # advances past the file's commit, e.g. someone merges a rename of the
+    # spec file and every previously-emitted /review URL starts 404'ing
+    # because raw.githubusercontent.com now resolves the branch to a newer
+    # commit where the file lives at a different path.
+    base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+    if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
+    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these breaking changes → ${free_review_url}"
     echo "### 📋 [Review & approve these breaking changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
 else
@@ -123,5 +140,9 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+# review_url is a single-line output, written after the multiline `breaking`
+# block is closed so it doesn't get folded into that value. Empty when there
+# are no breaking changes (the notice/URL only fire then).
+echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
 
 exit $exit_code

@@ -77,16 +77,48 @@ repo="${GITHUB_REPOSITORY#*/}"
 
 # Emit free review annotation (public repos only — no auth required)
 urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-# Strip git ref prefix (e.g. "origin/main:path.yaml" -> "path.yaml", "HEAD:path.yaml" -> "path.yaml")
-base_path=$(echo "$base" | sed 's/.*://')
-rev_path=$(echo "$revision" | sed 's/.*://')
+# Resolve the on-disk / on-repo path portion of `base` and `revision` for
+# the free /review URL. Two input shapes are supported:
+#
+#   1. Git-ref form  — "origin/main:openapi.yaml" or "HEAD:openapi.yaml".
+#      The sed strips everything up to the colon so we keep just the path.
+#   2. URL form      — "https://raw.githubusercontent.com/o/r/main/foo.yaml".
+#      The naive sed would also strip "https:" and leave a broken
+#      "//raw.githubusercontent.com/..." which the /review page then can't
+#      fetch (it renders as the access-denied screen with a misleading
+#      "owner doesn't have access" message). Pass URLs through unchanged.
+strip_ref_prefix() {
+    case "$1" in
+        http://*|https://*) printf '%s' "$1" ;;
+        *)                  printf '%s' "$1" | sed 's/.*://' ;;
+    esac
+}
+base_path=$(strip_ref_prefix "$base")
+rev_path=$(strip_ref_prefix "$revision")
 # Prefer the base SHA over the branch name so the link is commit-pinned.
-free_base_sha="${base_sha:-$GITHUB_BASE_REF}"
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=${free_base_sha}&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+# Fall back through `git rev-parse origin/<branch>` before resorting to
+# the branch name itself, so push-event triggers (no pull_request payload)
+# also get an immutable SHA in the URL whenever the base branch was
+# fetched into the workspace.
+if [ -n "$base_sha" ]; then
+    free_base_sha="$base_sha"
+else
+    free_base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF")
+fi
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
-# Build the JSON payload
-payload=$(jq -n \
+# Build the JSON payload. The `changes` array can be very large for
+# complex specs (one real-world report was observed at thousands of
+# entries running into the megabytes), so it's piped via stdin rather
+# than passed as a `--argjson` value. `--argjson` would put the entire
+# JSON string on jq's command line, exceeding the OS argument-length
+# limit (ARG_MAX, typically 128KB to 2MB depending on the kernel),
+# which surfaces as a confusing "jq: Argument list too long" error
+# that aborts the action right before the POST to oasdiff-service.
+# `printf` is a shell builtin in POSIX sh / busybox ash so its
+# arguments don't go through execve and aren't subject to ARG_MAX.
+payload=$(printf '%s' "$changes" | jq \
     --arg token "$github_token" \
     --arg owner "$owner" \
     --arg repo "$repo" \
@@ -96,8 +128,7 @@ payload=$(jq -n \
     --arg base_sha "$base_sha" \
     --arg base_file "$base" \
     --arg rev_file "$revision" \
-    --argjson changes "$changes" \
-    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref, base_sha: $base_sha}, base_file: $base_file, rev_file: $rev_file, changes: $changes}')
+    '{github: {token: $token, owner: $owner, repo: $repo, pull_number: $pr, head_sha: $sha, base_ref: $base_ref, base_sha: $base_sha}, base_file: $base_file, rev_file: $rev_file, changes: .}')
 
 # POST to oasdiff-service (requires token)
 if [ -z "$oasdiff_token" ]; then
@@ -105,10 +136,17 @@ if [ -z "$oasdiff_token" ]; then
     exit 0
 fi
 
-response=$(curl -s -w "\n%{http_code}" -X POST \
+# POST the payload via stdin (`--data-binary @-`) rather than as a
+# `-d` argv value. For specs whose changelog runs into the multi-MB
+# range the assembled payload is also multi-MB; passing it via argv
+# would exceed ARG_MAX and surface as `curl: Argument list too long`,
+# aborting the action exactly like the analogous jq case did at line
+# 89 before the previous fix. `printf` is a shell builtin so the
+# variable never goes through execve.
+response=$(printf '%s' "$payload" | curl -s -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
-    -d "$payload")
+    --data-binary @-)
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')

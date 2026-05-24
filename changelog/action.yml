@@ -58,6 +58,8 @@ inputs:
 outputs:
   changelog:
     description: 'Output summary of API changelog'
+  review_url:
+    description: 'URL of the free oasdiff review page for these changes (empty when there are no changes)'
 runs:
   using: 'docker'
   image: 'Dockerfile'

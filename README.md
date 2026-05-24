@@ -1,5 +1,9 @@
 # oasdiff-action
-[![CI](https://github.com/oasdiff/oasdiff-action/actions/workflows/test.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions)
+[![breaking](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-breaking.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-breaking.yaml)
+[![changelog](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-changelog.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-changelog.yaml)
+[![diff](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml)
+[![pr-comment](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml)
+[![validate](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml)
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 

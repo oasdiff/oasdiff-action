@@ -79,8 +79,6 @@ if [ -n "$level" ]; then
 fi
 echo "flags: $flags"
 
-set -o pipefail
-
 # *** github action step output ***
 
 # output name should be in the syntax of multiple lines:
@@ -101,13 +99,31 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     write_output "$output"
     # Emit upgrade notice pointing to the free review page
     urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-    base_path=$(echo "$base" | sed 's/.*://')
-    rev_path=$(echo "$revision" | sed 's/.*://')
+    # Strip the git-ref prefix ("origin/main:openapi.yaml" -> "openapi.yaml")
+    # but pass http(s):// URLs through unchanged. A naive `sed 's/.*://'` would
+    # also eat "https:" and emit a broken "//host/..." that the /review page
+    # can't fetch (it renders the misleading access-denied screen).
+    strip_ref_prefix() {
+        case "$1" in
+            http://*|https://*) printf '%s' "$1" ;;
+            *)                  printf '%s' "$1" | sed 's/.*://' ;;
+        esac
+    }
+    base_path=$(strip_ref_prefix "$base")
+    rev_path=$(strip_ref_prefix "$revision")
     owner="${GITHUB_REPOSITORY%%/*}"
     repo="${GITHUB_REPOSITORY#*/}"
     head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
-    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$GITHUB_BASE_REF")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+    # base_sha must be an immutable commit SHA, not the branch name. Using
+    # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
+    # advances past the file's commit, e.g. someone merges a rename of the
+    # spec file and every previously-emitted /review URL starts 404'ing
+    # because raw.githubusercontent.com now resolves the branch to a newer
+    # commit where the file lives at a different path.
+    base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+    if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
+    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these API changes → ${free_review_url}"
     echo "### 📋 [Review & approve these API changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
 else
@@ -115,6 +131,10 @@ else
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
+# review_url is a single-line output, written after the multiline `changelog`
+# block is closed so it doesn't get folded into that value. Empty when there
+# are no changes (the notice/URL only fire then).
+echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
 
 # *** github action step output ***
 
