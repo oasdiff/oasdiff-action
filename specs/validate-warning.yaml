@@ -1,0 +1,8 @@
+openapi: 3.0.0
+info:
+  title: warning
+  version: "1.0.0"
+  license:
+    name: MIT
+    identifier: MIT
+paths: {}

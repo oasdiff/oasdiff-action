@@ -4,21 +4,27 @@ inputs:
   spec:
     description: 'Path of the OpenAPI spec in YAML or JSON format'
     required: true
-  fail-on-finding:
-    description: 'Fail with exit code 1 if any finding is reported (default: true)'
+  fail-on:
+    description: 'Fail with exit code 1 when a finding has this severity or higher: ERR, WARN, or INFO. Defaults to ERR (errors fail the build; warnings and info are reported but do not). For a non-blocking, report-only run, set continue-on-error on the step.'
     required: false
-    default: 'true'
+    default: ''
   allow-external-refs:
     description: 'Allow external $refs in the spec; disable to prevent SSRF when validating untrusted specs'
     required: false
     default: 'true'
 outputs:
   findings:
-    description: 'Number of findings reported by validate (0 if the spec is well-formed)'
+    description: 'Total number of findings reported by validate (0 if the spec is valid)'
+  error_count:
+    description: 'Number of error-level findings'
+  warning_count:
+    description: 'Number of warning-level findings'
+  info_count:
+    description: 'Number of info-level findings'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
     - ${{ inputs.spec }}
-    - ${{ inputs.fail-on-finding }}
+    - ${{ inputs.fail-on }}
     - ${{ inputs.allow-external-refs }}
