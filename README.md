@@ -3,6 +3,7 @@
 [![changelog](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-changelog.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-changelog.yaml)
 [![diff](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml)
 [![pr-comment](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml)
+[![validate](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml)
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
@@ -13,6 +14,7 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
   - [Check for breaking changes](#check-for-breaking-changes)
   - [Generate a changelog](#generate-a-changelog)
   - [Generate a diff report](#generate-a-diff-report)
+  - [Validate a single spec](#validate-a-single-spec)
 - [Configuring with `.oasdiff.yaml`](#configuring-with-oasdiffyaml)
 - [Spec paths](#spec-paths)
 - [Pro: Rich PR comment](#pro-rich-pr-comment)
@@ -158,6 +160,33 @@ jobs:
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+
+### Validate a single spec
+
+Validates one OpenAPI spec against the OpenAPI and JSON Schema rules and writes an inline GitHub annotation for each finding. Unlike the other actions it takes a single spec, not a base/revision pair. Findings are classified by severity (error, warning, info); by default the workflow fails only on errors.
+
+```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oasdiff/oasdiff-action/validate@v0.0.48
+        with:
+          spec: 'openapi.yaml'
+```
+
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `spec` | — (required) | Path to the OpenAPI spec to validate | file path, URL, git ref |
+| `fail-on` | `''` | Fail with exit code 1 when a finding is at or above this severity (empty uses the oasdiff default, `ERR`) | `ERR`, `WARN`, `INFO` |
+| `allow-external-refs` | `true` | Resolve external `$ref`s; set `false` to prevent SSRF when validating untrusted specs | `true`, `false` |
+
+For a non-blocking, report-only run, leave `fail-on` and set `continue-on-error: true` on the step. Outputs: `findings` (total), `error_count`, `warning_count`, `info_count`.
 
 ---
 

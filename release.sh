@@ -11,7 +11,7 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-DOCKERFILES="breaking/Dockerfile changelog/Dockerfile diff/Dockerfile pr-comment/Dockerfile"
+DOCKERFILES="breaking/Dockerfile changelog/Dockerfile diff/Dockerfile validate/Dockerfile pr-comment/Dockerfile"
 
 # ── Resolve action version ───────────────────────────────────────────────────
 

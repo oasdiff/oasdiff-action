@@ -1,0 +1,81 @@
+name: validate
+on:
+  pull_request:
+  push:
+jobs:
+  oasdiff_validate_valid:
+    runs-on: ubuntu-latest
+    name: Test validate on a valid spec
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running validate action on a valid spec
+        id: test_validate_valid
+        uses: ./validate
+        with:
+          spec: 'specs/valid.yaml'
+      - name: Test validate reports zero findings
+        run: |
+          findings="${{ steps.test_validate_valid.outputs.findings }}"
+          if [ "$findings" != "0" ]; then
+            echo "Expected 0 findings, got '$findings'" >&2
+            exit 1
+          fi
+  oasdiff_validate_findings:
+    runs-on: ubuntu-latest
+    name: Test validate fails on an invalid spec
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Running validate action on an invalid spec
+        id: test_validate_findings
+        continue-on-error: true
+        uses: ./validate
+        with:
+          spec: 'specs/invalid.yaml'
+      - name: Test validate failed and reported findings
+        run: |
+          if [ "${{ steps.test_validate_findings.outcome }}" != "failure" ]; then
+            echo "Expected the validate step to fail on error-level findings" >&2
+            exit 1
+          fi
+          findings="${{ steps.test_validate_findings.outputs.findings }}"
+          if [ "$findings" = "0" ] || [ -z "$findings" ]; then
+            echo "Expected findings > 0, got '$findings'" >&2
+            exit 1
+          fi
+  oasdiff_validate_fail_on:
+    runs-on: ubuntu-latest
+    name: Test validate severity threshold (--fail-on)
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Validate a warning-only spec with the default threshold
+        id: test_validate_warn_default
+        uses: ./validate
+        with:
+          spec: 'specs/validate-warning.yaml'
+      - name: Default threshold reports the warning but passes
+        run: |
+          if [ "${{ steps.test_validate_warn_default.outcome }}" != "success" ]; then
+            echo "Expected the step to pass (warnings don't fail by default)" >&2
+            exit 1
+          fi
+          warnings="${{ steps.test_validate_warn_default.outputs.warning_count }}"
+          if [ "$warnings" != "1" ]; then
+            echo "Expected warning_count 1, got '$warnings'" >&2
+            exit 1
+          fi
+      - name: Validate the same spec with fail-on WARN
+        id: test_validate_warn_failon
+        continue-on-error: true
+        uses: ./validate
+        with:
+          spec: 'specs/validate-warning.yaml'
+          fail-on: 'WARN'
+      - name: fail-on WARN escalates the warning to a failure
+        run: |
+          if [ "${{ steps.test_validate_warn_failon.outcome }}" != "failure" ]; then
+            echo "Expected the step to fail with fail-on WARN" >&2
+            exit 1
+          fi
