@@ -28,8 +28,8 @@ echo "flags: $flags"
 # Run 1: render annotations to stdout via --format githubactions so GitHub
 # parses them onto the PR's "Files changed" tab. This is the authoritative
 # run: its exit code honours --fail-on (1 when a finding is at or above the
-# threshold, 0 otherwise). Tolerate non-zero so we can still set the output
-# and emit the notice below; the exit code is reapplied at the end.
+# threshold, 0 otherwise). Tolerate non-zero so we can still set the outputs
+# below; the exit code is reapplied at the end.
 exit_code=0
 oasdiff validate $flags --format githubactions "$spec" || exit_code=$?
 
@@ -60,21 +60,6 @@ if [ "$findings_count" -eq 0 ]; then
         echo "warning_count=0"
         echo "info_count=0"
     } >>"$GITHUB_OUTPUT"
-fi
-
-# When there are findings, point the user at oasdiff.com, the same way the
-# breaking action does (notice annotation + step-summary link). The precise
-# location of each finding is already on the annotations above.
-if [ "$findings_count" -gt 0 ]; then
-    notice_url="https://www.oasdiff.com/review?owner=$(printf '%s' "${GITHUB_REPOSITORY%%/*}" | jq -sRr @uri)&repo=$(printf '%s' "${GITHUB_REPOSITORY#*/}" | jq -sRr @uri)"
-    echo "::notice::🔎 ${findings_count} OpenAPI validation finding(s). See annotations above. oasdiff.com → ${notice_url}"
-    {
-        echo "### 🔎 oasdiff validate found ${findings_count} OpenAPI spec issue(s)"
-        echo ""
-        echo "See annotations on the Files Changed tab for the precise line and column of each finding."
-        echo ""
-        echo "[Learn more about oasdiff →](${notice_url})"
-    } >> "$GITHUB_STEP_SUMMARY"
 fi
 
 exit "$exit_code"
