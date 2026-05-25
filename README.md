@@ -175,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oasdiff/oasdiff-action/validate@v0.0.47
+      - uses: oasdiff/oasdiff-action/validate@v0.0.48
         with:
           spec: 'openapi.yaml'
 ```
