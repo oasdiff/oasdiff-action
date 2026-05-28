@@ -125,7 +125,20 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
     echo "::notice::📋 Review & approve these API changes → ${free_review_url}"
-    echo "### 📋 [Review & approve these API changes](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+    # The Step Summary surfaces both the link (for visitors who'd rather use
+    # the web UI) and the CLI command itself (for visitors who recognize it
+    # and want to skip the instruction-page detour). GitHub renders the
+    # fenced code block with a built-in copy button. See
+    # enterprise/docs/cli-local-review.md (Phase 1, step 5).
+    {
+        echo "### 📋 [Review & approve these API changes](${free_review_url})"
+        echo ""
+        echo "Or run locally in your clone of \`${repo}\`:"
+        echo ""
+        echo '```bash'
+        echo "oasdiff changelog ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
+        echo '```'
+    } >> "$GITHUB_STEP_SUMMARY"
 else
     write_output "No changelog changes"
 fi
