@@ -39,6 +39,10 @@ inputs:
     description: 'Output to a file at the given path'
     required: false
     default: ''
+  allow-external-refs:
+    description: 'Allow external $refs in the spec; disable to prevent SSRF when processing untrusted specs. Defaults to false (safe for CI on untrusted pull requests).'
+    required: false
+    default: 'false'
 outputs:
   diff:
     description: 'Output summary of API diff'
@@ -56,3 +60,4 @@ runs:
     - ${{ inputs.composed }}
     - ${{ inputs.flatten-allof }}
     - ${{ inputs.output-to-file }}
+    - ${{ inputs.allow-external-refs }}

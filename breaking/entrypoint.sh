@@ -20,6 +20,7 @@ readonly flatten_allof="${11}"
 readonly err_ignore="${12}"
 readonly warn_ignore="${13}"
 readonly output_to_file="${14}"
+readonly allow_external_refs="${15}"
 
 write_output () {
     local output="$1"
@@ -44,6 +45,11 @@ echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fa
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
@@ -86,7 +92,15 @@ if [ -n "$fail_on" ]; then
     fail_on_flag="--fail-on $fail_on"
 fi
 exit_code=0
-breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag) || exit_code=$?
+_err=$(mktemp)
+breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag 2>"$_err") || exit_code=$?
+[ -s "$_err" ] && cat "$_err" >&2
+# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
+# not message text). Surface the action-specific remedy.
+if [ "$exit_code" -eq 123 ]; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+fi
+rm -f "$_err"
 
 # Run 2: render annotations to stdout via --format githubactions so
 # GitHub parses them onto the PR's "Files changed" tab. Tolerate

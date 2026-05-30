@@ -55,6 +55,10 @@ inputs:
     description: 'Output level: INFO (default), WARN, or ERR'
     required: false
     default: ''
+  allow-external-refs:
+    description: 'Allow external $refs in the spec; disable to prevent SSRF when processing untrusted specs. Defaults to false (safe for CI on untrusted pull requests).'
+    required: false
+    default: 'false'
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -78,4 +82,5 @@ runs:
     - ${{ inputs.format }}
     - ${{ inputs.template }}
     - ${{ inputs.level }}
+    - ${{ inputs.allow-external-refs }}
 

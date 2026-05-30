@@ -35,11 +35,17 @@ readonly filter_extension="$7"
 readonly composed="$8"
 readonly flatten_allof="$9"
 readonly output_to_file="${10}"
+readonly allow_external_refs="${11}"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$format" != "yaml" ]; then
     flags="$flags --format $format"
 fi
@@ -75,11 +81,19 @@ echo "diff<<$delimiter" >>"$GITHUB_OUTPUT"
 
 # Capture the exit code from oasdiff command while still getting the output
 exit_code=0
+_err=$(mktemp)
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags) || exit_code=$?
+    output=$(oasdiff diff "$base" "$revision" $flags 2>"$_err") || exit_code=$?
 else
-    output=$(oasdiff diff "$base" "$revision") || exit_code=$?
+    output=$(oasdiff diff "$base" "$revision" 2>"$_err") || exit_code=$?
 fi
+[ -s "$_err" ] && cat "$_err" >&2
+# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
+# not message text). Surface the action-specific remedy.
+if [ "$exit_code" -eq 123 ]; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+fi
+rm -f "$_err"
 
 if [ -n "$output" ]; then
     write_output "$output" 

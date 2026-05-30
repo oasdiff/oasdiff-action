@@ -30,6 +30,10 @@ inputs:
     description: 'oasdiff service base URL (override for testing)'
     required: false
     default: 'https://api.oasdiff.com'
+  allow-external-refs:
+    description: 'Allow external $refs in the spec; disable to prevent SSRF when processing untrusted specs. Defaults to false (safe for CI on untrusted pull requests).'
+    required: false
+    default: 'false'
 runs:
   using: 'docker'
   image: 'Dockerfile'
@@ -42,3 +46,4 @@ runs:
     - ${{ inputs.oasdiff-token }}
     - ${{ inputs.github-token }}
     - ${{ inputs.service-url }}
+    - ${{ inputs.allow-external-refs }}

@@ -14,11 +14,17 @@ readonly composed="$5"
 readonly oasdiff_token="$6"
 readonly github_token="$7"
 readonly service_url="${8:-https://api.oasdiff.com}"
+readonly allow_external_refs="${9}"
 
 echo "running oasdiff pr-comment base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed"
 
 # Build flags
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
@@ -36,11 +42,20 @@ fi
 # us from collecting the JSON. Real failures (missing file, parse error)
 # still abort because they leave $changelog empty.
 oasdiff_exit=0
-changelog=$(oasdiff changelog "$base" "$revision" --format json $flags) || oasdiff_exit=$?
+_err=$(mktemp)
+changelog=$(oasdiff changelog "$base" "$revision" --format json $flags 2>"$_err") || oasdiff_exit=$?
 if [ "$oasdiff_exit" -ne 0 ] && [ -z "$changelog" ]; then
+    [ -s "$_err" ] && cat "$_err" >&2
+    # Exit code 123 = oasdiff refused a disallowed external $ref (stable
+    # contract, not message text). Surface the action-specific remedy.
+    if [ "$oasdiff_exit" -eq 123 ]; then
+        echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+    fi
+    rm -f "$_err"
     echo "ERROR: oasdiff exited $oasdiff_exit with no output" >&2
     exit $oasdiff_exit
 fi
+rm -f "$_err"
 
 # If no changes, use empty array
 if [ -z "$changelog" ] || [ "$changelog" = "null" ] || [ "$changelog" = "[]" ]; then

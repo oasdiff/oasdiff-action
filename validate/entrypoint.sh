@@ -12,13 +12,14 @@ readonly allow_external_refs="$3"
 
 echo "running oasdiff validate... spec: $spec, fail_on: $fail_on, allow_external_refs: $allow_external_refs"
 
-# Build flags. --allow-external-refs defaults to true in oasdiff, so only
-# pass it when the input opts out. --fail-on defaults to ERR in oasdiff
+# Build flags. The action input allow-external-refs defaults to false (safe for
+# CI on untrusted PRs); pass whatever it resolved to so the explicit input is
+# authoritative over any oasdiff.yaml value. --fail-on defaults to ERR in oasdiff
 # (errors fail the build; warnings and info are reported but don't), so only
 # pass it when the input overrides the threshold.
 flags=""
-if [ "$allow_external_refs" = "false" ]; then
-    flags="$flags --allow-external-refs=false"
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
 fi
 if [ -n "$fail_on" ]; then
     flags="$flags --fail-on $fail_on"
@@ -31,7 +32,15 @@ echo "flags: $flags"
 # threshold, 0 otherwise). Tolerate non-zero so we can still set the outputs
 # below; the exit code is reapplied at the end.
 exit_code=0
-oasdiff validate $flags --format githubactions "$spec" || exit_code=$?
+_err=$(mktemp)
+oasdiff validate $flags --format githubactions "$spec" 2>"$_err" || exit_code=$?
+[ -s "$_err" ] && cat "$_err" >&2
+# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
+# not message text). Surface the action-specific remedy.
+if [ "$exit_code" -eq 123 ]; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff validate step."
+fi
+rm -f "$_err"
 
 # Run 2: text format, captured for the finding count. Tolerate non-zero
 # exit (the authoritative decision is already captured above).

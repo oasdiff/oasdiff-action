@@ -39,11 +39,17 @@ readonly case_insensitive_headers="${11}"
 readonly format="${12}"
 readonly template="${13}"
 readonly level="${14}"
+readonly allow_external_refs="${15}"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
@@ -89,11 +95,24 @@ echo "flags: $flags"
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "changelog<<$delimiter" >>"$GITHUB_OUTPUT"
 
+exit_code=0
+_err=$(mktemp)
 if [ -n "$flags" ]; then
-    output=$(oasdiff changelog "$base" "$revision" $flags)
+    output=$(oasdiff changelog "$base" "$revision" $flags 2>"$_err") || exit_code=$?
 else
-    output=$(oasdiff changelog "$base" "$revision")
+    output=$(oasdiff changelog "$base" "$revision" 2>"$_err") || exit_code=$?
 fi
+if [ "$exit_code" -ne 0 ]; then
+    [ -s "$_err" ] && cat "$_err" >&2
+    # Exit code 123 = oasdiff refused a disallowed external $ref (stable
+    # contract, not message text). Surface the action-specific remedy.
+    if [ "$exit_code" -eq 123 ]; then
+        echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+    fi
+    rm -f "$_err"
+    exit "$exit_code"
+fi
+rm -f "$_err"
 
 if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     write_output "$output"
