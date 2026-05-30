@@ -88,7 +88,9 @@ else
     output=$(oasdiff diff "$base" "$revision" 2>"$_err") || exit_code=$?
 fi
 [ -s "$_err" ] && cat "$_err" >&2
-if [ "$exit_code" -ne 0 ] && grep -qiE 'external \$ref not allowed|disallowed external reference' "$_err"; then
+# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
+# not message text). Surface the action-specific remedy.
+if [ "$exit_code" -eq 123 ]; then
     echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
 fi
 rm -f "$_err"
