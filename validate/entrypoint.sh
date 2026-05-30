@@ -35,6 +35,12 @@ exit_code=0
 _err=$(mktemp)
 oasdiff validate $flags --format githubactions "$spec" 2>"$_err" || exit_code=$?
 [ -s "$_err" ] && cat "$_err" >&2
+# Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
+# success and exit 1 is the intended fail-on result; only codes >=2
+# (load/parse/etc.) are real errors worth surfacing here.
+if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
+    echo "::error::$(tr '\n' ' ' < "$_err")"
+fi
 # Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
 # not message text). Surface the action-specific remedy.
 if [ "$exit_code" -eq 123 ]; then

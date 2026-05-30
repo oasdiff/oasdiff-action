@@ -1,0 +1,62 @@
+name: error-annotation
+on:
+  pull_request:
+  push:
+jobs:
+  entrypoint_error_annotation:
+    runs-on: ubuntu-latest
+    name: Entrypoints surface genuine errors as annotations, not fail-on
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Exercise entrypoints with a stubbed oasdiff
+        run: |
+          set -eu
+
+          # Stub oasdiff: write $STUB_STDERR to stderr (if set) and exit
+          # $STUB_CODE. Lets us drive the entrypoints' exit-code handling
+          # deterministically without a real spec or network.
+          mkdir -p /tmp/bin
+          cat > /tmp/bin/oasdiff <<'STUB'
+          #!/bin/sh
+          [ -n "${STUB_STDERR:-}" ] && printf '%s\n' "$STUB_STDERR" >&2
+          exit "${STUB_CODE:-0}"
+          STUB
+          chmod +x /tmp/bin/oasdiff
+          export PATH="/tmp/bin:$PATH"
+          export GITHUB_OUTPUT=/tmp/gh_output
+          export GITHUB_STEP_SUMMARY=/tmp/gh_summary
+          export GITHUB_REPOSITORY=o/r GITHUB_SHA=deadbeef
+
+          fail() { echo "FAIL: $1" >&2; exit 1; }
+
+          # $1=entrypoint $2=exit-code $3=stderr ; echoes the entrypoint's stdout.
+          # Trailing args after $3 are the positional inputs for that entrypoint.
+          run() {
+            ep="$1"; code="$2"; err="$3"; shift 3
+            : > "$GITHUB_OUTPUT"; : > "$GITHUB_STEP_SUMMARY"
+            STUB_CODE="$code" STUB_STDERR="$err" sh "$ep" "$@" 2>/dev/null || true
+          }
+
+          # validate (standalone shape, shared by breaking/diff): spec, fail-on, allow-external-refs
+          v() { run validate/entrypoint.sh "$1" "$2" valid.yaml "" "false"; }
+          # changelog (early-exit shape, shared by pr-comment): 15 positional inputs
+          c() { run changelog/entrypoint.sh "$1" "$2" base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false"; }
+
+          # --- genuine load error (exit 102) -> generic ::error:: annotation ---
+          echo "$(v 102 'Error: failed to load spec from "x.yaml": no such file')" | grep -q '::error::' \
+            || fail "validate: exit 102 should emit a ::error:: annotation"
+          echo "$(c 102 'Error: failed to load spec from "x.yaml": no such file')" | grep -q '::error::' \
+            || fail "changelog: exit 102 should emit a ::error:: annotation"
+
+          # --- disallowed external ref (exit 123) -> the allow-external-refs remedy ---
+          echo "$(v 123 'Error: external $ref not allowed: https://evil')" | grep -q "allow-external-refs: true" \
+            || fail "validate: exit 123 should emit the allow-external-refs remedy"
+          echo "$(c 123 'Error: external $ref not allowed: https://evil')" | grep -q "allow-external-refs: true" \
+            || fail "changelog: exit 123 should emit the allow-external-refs remedy"
+
+          # --- fail-on / changes-found (exit 1, no stderr) -> NO ::error:: annotation ---
+          if echo "$(v 1 '')" | grep -q '::error::'; then fail "validate: exit 1 (fail-on) must not annotate"; fi
+          if echo "$(c 1 '')" | grep -q '::error::'; then fail "changelog: exit 1 (fail-on) must not annotate"; fi
+
+          echo "all error-annotation assertions passed"
