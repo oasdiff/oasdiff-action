@@ -81,11 +81,17 @@ echo "diff<<$delimiter" >>"$GITHUB_OUTPUT"
 
 # Capture the exit code from oasdiff command while still getting the output
 exit_code=0
+_err=$(mktemp)
 if [ -n "$flags" ]; then
-    output=$(oasdiff diff "$base" "$revision" $flags) || exit_code=$?
+    output=$(oasdiff diff "$base" "$revision" $flags 2>"$_err") || exit_code=$?
 else
-    output=$(oasdiff diff "$base" "$revision") || exit_code=$?
+    output=$(oasdiff diff "$base" "$revision" 2>"$_err") || exit_code=$?
 fi
+[ -s "$_err" ] && cat "$_err" >&2
+if [ "$exit_code" -ne 0 ] && grep -qiE 'external \$ref not allowed|disallowed external reference' "$_err"; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+fi
+rm -f "$_err"
 
 if [ -n "$output" ]; then
     write_output "$output" 

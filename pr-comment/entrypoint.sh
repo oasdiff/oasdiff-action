@@ -42,11 +42,18 @@ fi
 # us from collecting the JSON. Real failures (missing file, parse error)
 # still abort because they leave $changelog empty.
 oasdiff_exit=0
-changelog=$(oasdiff changelog "$base" "$revision" --format json $flags) || oasdiff_exit=$?
+_err=$(mktemp)
+changelog=$(oasdiff changelog "$base" "$revision" --format json $flags 2>"$_err") || oasdiff_exit=$?
 if [ "$oasdiff_exit" -ne 0 ] && [ -z "$changelog" ]; then
+    [ -s "$_err" ] && cat "$_err" >&2
+    if grep -qiE 'external \$ref not allowed|disallowed external reference' "$_err"; then
+        echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+    fi
+    rm -f "$_err"
     echo "ERROR: oasdiff exited $oasdiff_exit with no output" >&2
     exit $oasdiff_exit
 fi
+rm -f "$_err"
 
 # If no changes, use empty array
 if [ -z "$changelog" ] || [ "$changelog" = "null" ] || [ "$changelog" = "[]" ]; then

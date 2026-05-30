@@ -32,7 +32,13 @@ echo "flags: $flags"
 # threshold, 0 otherwise). Tolerate non-zero so we can still set the outputs
 # below; the exit code is reapplied at the end.
 exit_code=0
-oasdiff validate $flags --format githubactions "$spec" || exit_code=$?
+_err=$(mktemp)
+oasdiff validate $flags --format githubactions "$spec" 2>"$_err" || exit_code=$?
+[ -s "$_err" ] && cat "$_err" >&2
+if [ "$exit_code" -ne 0 ] && grep -qiE 'external \$ref not allowed|disallowed external reference' "$_err"; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff validate step."
+fi
+rm -f "$_err"
 
 # Run 2: text format, captured for the finding count. Tolerate non-zero
 # exit (the authoritative decision is already captured above).

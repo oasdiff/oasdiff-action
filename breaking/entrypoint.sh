@@ -92,7 +92,13 @@ if [ -n "$fail_on" ]; then
     fail_on_flag="--fail-on $fail_on"
 fi
 exit_code=0
-breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag) || exit_code=$?
+_err=$(mktemp)
+breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag 2>"$_err") || exit_code=$?
+[ -s "$_err" ] && cat "$_err" >&2
+if [ "$exit_code" -ne 0 ] && grep -qiE 'external \$ref not allowed|disallowed external reference' "$_err"; then
+    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+fi
+rm -f "$_err"
 
 # Run 2: render annotations to stdout via --format githubactions so
 # GitHub parses them onto the PR's "Files changed" tab. Tolerate
