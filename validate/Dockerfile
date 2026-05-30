@@ -1,4 +1,4 @@
-FROM tufin/oasdiff:v1.18.0
+FROM tufin/oasdiff:v1.18.1
 ENV PLATFORM github-action
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
