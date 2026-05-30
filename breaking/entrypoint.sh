@@ -20,6 +20,7 @@ readonly flatten_allof="${11}"
 readonly err_ignore="${12}"
 readonly warn_ignore="${13}"
 readonly output_to_file="${14}"
+readonly allow_external_refs="${15}"
 
 write_output () {
     local output="$1"
@@ -44,6 +45,11 @@ echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fa
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi

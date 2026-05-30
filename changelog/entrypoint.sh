@@ -39,11 +39,17 @@ readonly case_insensitive_headers="${11}"
 readonly format="${12}"
 readonly template="${13}"
 readonly level="${14}"
+readonly allow_external_refs="${15}"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi

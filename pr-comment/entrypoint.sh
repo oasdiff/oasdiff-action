@@ -14,11 +14,17 @@ readonly composed="$5"
 readonly oasdiff_token="$6"
 readonly github_token="$7"
 readonly service_url="${8:-https://api.oasdiff.com}"
+readonly allow_external_refs="${9}"
 
 echo "running oasdiff pr-comment base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, composed: $composed"
 
 # Build flags
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi

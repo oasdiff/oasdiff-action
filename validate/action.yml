@@ -9,9 +9,9 @@ inputs:
     required: false
     default: ''
   allow-external-refs:
-    description: 'Allow external $refs in the spec; disable to prevent SSRF when validating untrusted specs'
+    description: 'Allow external $refs in the spec; disable to prevent SSRF when validating untrusted specs. Defaults to false (safe for CI on untrusted pull requests).'
     required: false
-    default: 'true'
+    default: 'false'
 outputs:
   findings:
     description: 'Total number of findings reported by validate (0 if the spec is valid)'

@@ -88,6 +88,7 @@ jobs:
 | `err-ignore` | `''` | Path to a file containing regex patterns for error-level changes to ignore | file path |
 | `warn-ignore` | `''` | Path to a file containing regex patterns for warning-level changes to ignore | file path |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 
 ### Generate a changelog
 
@@ -126,6 +127,7 @@ jobs:
 | `case-insensitive-headers` | `false` | Compare headers case-insensitively | `true`, `false` |
 | `template` | `''` | Custom Go template for output formatting | Go template string |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 
 ### Generate a diff report
 
@@ -160,6 +162,7 @@ jobs:
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 
 ### Validate a single spec
 
@@ -184,7 +187,7 @@ jobs:
 |---|---|---|---|
 | `spec` | — (required) | Path to the OpenAPI spec to validate | file path, URL, git ref |
 | `fail-on` | `''` | Fail with exit code 1 when a finding is at or above this severity (empty uses the oasdiff default, `ERR`) | `ERR`, `WARN`, `INFO` |
-| `allow-external-refs` | `true` | Resolve external `$ref`s; set `false` to prevent SSRF when validating untrusted specs | `true`, `false` |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs | `true`, `false` |
 
 For a non-blocking, report-only run, leave `fail-on` and set `continue-on-error: true` on the step. Outputs: `findings` (total), `error_count`, `warning_count`, `info_count`.
 
@@ -292,5 +295,6 @@ Each **Review** link opens a hosted page with a side-by-side spec diff and **App
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 
 [Get oasdiff Pro →](https://www.oasdiff.com/pricing)

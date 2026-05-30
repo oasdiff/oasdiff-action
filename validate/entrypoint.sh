@@ -12,13 +12,14 @@ readonly allow_external_refs="$3"
 
 echo "running oasdiff validate... spec: $spec, fail_on: $fail_on, allow_external_refs: $allow_external_refs"
 
-# Build flags. --allow-external-refs defaults to true in oasdiff, so only
-# pass it when the input opts out. --fail-on defaults to ERR in oasdiff
+# Build flags. The action input allow-external-refs defaults to false (safe for
+# CI on untrusted PRs); pass whatever it resolved to so the explicit input is
+# authoritative over any oasdiff.yaml value. --fail-on defaults to ERR in oasdiff
 # (errors fail the build; warnings and info are reported but don't), so only
 # pass it when the input overrides the threshold.
 flags=""
-if [ "$allow_external_refs" = "false" ]; then
-    flags="$flags --allow-external-refs=false"
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
 fi
 if [ -n "$fail_on" ]; then
     flags="$flags --fail-on $fail_on"

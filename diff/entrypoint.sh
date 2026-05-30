@@ -35,11 +35,17 @@ readonly filter_extension="$7"
 readonly composed="$8"
 readonly flatten_allof="$9"
 readonly output_to_file="${10}"
+readonly allow_external_refs="${11}"
 
 echo "running oasdiff diff base: $base, revision: $revision, format: $format, fail_on_diff: $fail_on_diff, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file"
 
 # Build flags to pass in command
 flags=""
+# allow-external-refs defaults to false (safe for CI on untrusted PRs); pass
+# whatever the input resolved to so the explicit action input is authoritative.
+if [ -n "$allow_external_refs" ]; then
+    flags="$flags --allow-external-refs=$allow_external_refs"
+fi
 if [ "$format" != "yaml" ]; then
     flags="$flags --format $format"
 fi
