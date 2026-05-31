@@ -46,6 +46,11 @@ _err=$(mktemp)
 changelog=$(oasdiff changelog "$base" "$revision" --format json $flags 2>"$_err") || oasdiff_exit=$?
 if [ "$oasdiff_exit" -ne 0 ] && [ -z "$changelog" ]; then
     [ -s "$_err" ] && cat "$_err" >&2
+    # Promote a genuine failure to a Checks-tab annotation. Exit 1 is the
+    # intended fail-on result (not an error); only codes >=2 are real errors.
+    if [ "$oasdiff_exit" -ge 2 ] && [ -s "$_err" ]; then
+        echo "::error::$(tr '\n' ' ' < "$_err")"
+    fi
     # Exit code 123 = oasdiff refused a disallowed external $ref (stable
     # contract, not message text). Surface the action-specific remedy.
     if [ "$oasdiff_exit" -eq 123 ]; then

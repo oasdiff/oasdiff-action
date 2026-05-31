@@ -1,0 +1,66 @@
+name: error-annotation
+on:
+  pull_request:
+  push:
+jobs:
+  entrypoint_error_annotation:
+    runs-on: ubuntu-latest
+    name: Entrypoints surface genuine errors as annotations, not success/fail-on
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Exercise every entrypoint with a stubbed oasdiff
+        run: |
+          set -eu
+
+          # Stub oasdiff: write $STUB_STDERR to stderr (if set), produce no
+          # stdout, and exit $STUB_CODE. Lets us drive each entrypoint's
+          # exit-code handling deterministically — no real spec, no network.
+          mkdir -p /tmp/bin
+          cat > /tmp/bin/oasdiff <<'STUB'
+          #!/bin/sh
+          [ -n "${STUB_STDERR:-}" ] && printf '%s\n' "$STUB_STDERR" >&2
+          exit "${STUB_CODE:-0}"
+          STUB
+          chmod +x /tmp/bin/oasdiff
+          export PATH="/tmp/bin:$PATH"
+          export GITHUB_OUTPUT=/tmp/gh_output GITHUB_STEP_SUMMARY=/tmp/gh_summary
+          export GITHUB_REPOSITORY=o/r GITHUB_SHA=deadbeef GITHUB_REF=refs/pull/1/merge
+          echo '{}' > /tmp/event.json; export GITHUB_EVENT_PATH=/tmp/event.json
+
+          fail() { echo "FAIL: $1" >&2; exit 1; }
+
+          # invoke <exit-code> <stderr> <command> -> prints the entrypoint's stdout.
+          # pr-comment gets an empty oasdiff-token so it skips the network POST.
+          invoke() {
+            export STUB_CODE="$1" STUB_STDERR="$2"; cmd="$3"
+            : > "$GITHUB_OUTPUT"; : > "$GITHUB_STEP_SUMMARY"
+            case "$cmd" in
+              breaking)   sh breaking/entrypoint.sh   base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
+              changelog)  sh changelog/entrypoint.sh  base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
+              diff)       sh diff/entrypoint.sh       base.yaml rev.yaml "" "" "" "" "" "" "" "false" ;;
+              pr-comment) sh pr-comment/entrypoint.sh base.yaml rev.yaml "" "" "" "" "" "" "false" ;;
+              validate)   sh validate/entrypoint.sh   spec.yaml "" "false" ;;
+            esac
+          }
+
+          for cmd in breaking changelog diff pr-comment validate; do
+            # success (exit 0): no ::error:: annotation
+            out=$(invoke 0 "" "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' && fail "$cmd: success (exit 0) must not emit ::error::"
+
+            # genuine error (exit 102): ::error:: annotation surfaced
+            out=$(invoke 102 'Error: failed to load spec from "x.yaml": no such file' "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' || fail "$cmd: exit 102 must emit a ::error:: annotation"
+
+            # disallowed external ref (exit 123): the allow-external-refs remedy
+            out=$(invoke 123 'Error: external $ref not allowed: https://evil' "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q 'allow-external-refs: true' || fail "$cmd: exit 123 must emit the allow-external-refs remedy"
+
+            # fail-on / changes-found (exit 1, no stderr): no ::error:: annotation
+            out=$(invoke 1 "" "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' && fail "$cmd: exit 1 (fail-on) must not emit ::error::"
+
+            echo "ok: $cmd"
+          done
+          echo "all error-annotation assertions passed"
