@@ -5,17 +5,17 @@ on:
 jobs:
   entrypoint_error_annotation:
     runs-on: ubuntu-latest
-    name: Entrypoints surface genuine errors as annotations, not fail-on
+    name: Entrypoints surface genuine errors as annotations, not success/fail-on
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: Exercise entrypoints with a stubbed oasdiff
+      - name: Exercise every entrypoint with a stubbed oasdiff
         run: |
           set -eu
 
-          # Stub oasdiff: write $STUB_STDERR to stderr (if set) and exit
-          # $STUB_CODE. Lets us drive the entrypoints' exit-code handling
-          # deterministically without a real spec or network.
+          # Stub oasdiff: write $STUB_STDERR to stderr (if set), produce no
+          # stdout, and exit $STUB_CODE. Lets us drive each entrypoint's
+          # exit-code handling deterministically — no real spec, no network.
           mkdir -p /tmp/bin
           cat > /tmp/bin/oasdiff <<'STUB'
           #!/bin/sh
@@ -24,39 +24,43 @@ jobs:
           STUB
           chmod +x /tmp/bin/oasdiff
           export PATH="/tmp/bin:$PATH"
-          export GITHUB_OUTPUT=/tmp/gh_output
-          export GITHUB_STEP_SUMMARY=/tmp/gh_summary
-          export GITHUB_REPOSITORY=o/r GITHUB_SHA=deadbeef
+          export GITHUB_OUTPUT=/tmp/gh_output GITHUB_STEP_SUMMARY=/tmp/gh_summary
+          export GITHUB_REPOSITORY=o/r GITHUB_SHA=deadbeef GITHUB_REF=refs/pull/1/merge
+          echo '{}' > /tmp/event.json; export GITHUB_EVENT_PATH=/tmp/event.json
 
           fail() { echo "FAIL: $1" >&2; exit 1; }
 
-          # $1=entrypoint $2=exit-code $3=stderr ; echoes the entrypoint's stdout.
-          # Trailing args after $3 are the positional inputs for that entrypoint.
-          run() {
-            ep="$1"; code="$2"; err="$3"; shift 3
+          # invoke <exit-code> <stderr> <command> -> prints the entrypoint's stdout.
+          # pr-comment gets an empty oasdiff-token so it skips the network POST.
+          invoke() {
+            export STUB_CODE="$1" STUB_STDERR="$2"; cmd="$3"
             : > "$GITHUB_OUTPUT"; : > "$GITHUB_STEP_SUMMARY"
-            STUB_CODE="$code" STUB_STDERR="$err" sh "$ep" "$@" 2>/dev/null || true
+            case "$cmd" in
+              breaking)   sh breaking/entrypoint.sh   base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
+              changelog)  sh changelog/entrypoint.sh  base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
+              diff)       sh diff/entrypoint.sh       base.yaml rev.yaml "" "" "" "" "" "" "" "false" ;;
+              pr-comment) sh pr-comment/entrypoint.sh base.yaml rev.yaml "" "" "" "" "" "" "false" ;;
+              validate)   sh validate/entrypoint.sh   spec.yaml "" "false" ;;
+            esac
           }
 
-          # validate (standalone shape, shared by breaking/diff): spec, fail-on, allow-external-refs
-          v() { run validate/entrypoint.sh "$1" "$2" valid.yaml "" "false"; }
-          # changelog (early-exit shape, shared by pr-comment): 15 positional inputs
-          c() { run changelog/entrypoint.sh "$1" "$2" base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false"; }
+          for cmd in breaking changelog diff pr-comment validate; do
+            # success (exit 0): no ::error:: annotation
+            out=$(invoke 0 "" "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' && fail "$cmd: success (exit 0) must not emit ::error::"
 
-          # --- genuine load error (exit 102) -> generic ::error:: annotation ---
-          echo "$(v 102 'Error: failed to load spec from "x.yaml": no such file')" | grep -q '::error::' \
-            || fail "validate: exit 102 should emit a ::error:: annotation"
-          echo "$(c 102 'Error: failed to load spec from "x.yaml": no such file')" | grep -q '::error::' \
-            || fail "changelog: exit 102 should emit a ::error:: annotation"
+            # genuine error (exit 102): ::error:: annotation surfaced
+            out=$(invoke 102 'Error: failed to load spec from "x.yaml": no such file' "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' || fail "$cmd: exit 102 must emit a ::error:: annotation"
 
-          # --- disallowed external ref (exit 123) -> the allow-external-refs remedy ---
-          echo "$(v 123 'Error: external $ref not allowed: https://evil')" | grep -q "allow-external-refs: true" \
-            || fail "validate: exit 123 should emit the allow-external-refs remedy"
-          echo "$(c 123 'Error: external $ref not allowed: https://evil')" | grep -q "allow-external-refs: true" \
-            || fail "changelog: exit 123 should emit the allow-external-refs remedy"
+            # disallowed external ref (exit 123): the allow-external-refs remedy
+            out=$(invoke 123 'Error: external $ref not allowed: https://evil' "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q 'allow-external-refs: true' || fail "$cmd: exit 123 must emit the allow-external-refs remedy"
 
-          # --- fail-on / changes-found (exit 1, no stderr) -> NO ::error:: annotation ---
-          if echo "$(v 1 '')" | grep -q '::error::'; then fail "validate: exit 1 (fail-on) must not annotate"; fi
-          if echo "$(c 1 '')" | grep -q '::error::'; then fail "changelog: exit 1 (fail-on) must not annotate"; fi
+            # fail-on / changes-found (exit 1, no stderr): no ::error:: annotation
+            out=$(invoke 1 "" "$cmd" 2>/dev/null || true)
+            echo "$out" | grep -q '::error::' && fail "$cmd: exit 1 (fail-on) must not emit ::error::"
 
+            echo "ok: $cmd"
+          done
           echo "all error-annotation assertions passed"
