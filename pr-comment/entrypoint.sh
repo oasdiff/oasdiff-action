@@ -198,6 +198,28 @@ elif [ "$http_code" = "409" ] && [ "$(echo "$body" | jq -r '.code // empty' 2>/d
         echo "3. Re-run this workflow"
     } >> "$GITHUB_STEP_SUMMARY"
     exit 1
+elif [ "$http_code" = "402" ] && [ "$(echo "$body" | jq -r '.code // empty' 2>/dev/null)" = "repo_limit_reached" ]; then
+    # The service returns 402 with a structured JSON body when this PR's
+    # repository is beyond the tenant's plan limit. This is a billing signal,
+    # not a failure, so surface a clear annotation + step summary with the
+    # upgrade link but do NOT fail the workflow (exit 0): a plan limit should
+    # not break the customer's merge gate. Change the exit below to 1 if you
+    # would rather hard-gate repositories beyond the plan.
+    err_owner=$(echo "$body" | jq -r '.owner')
+    err_repo=$(echo "$body" | jq -r '.repo')
+    max_repos=$(echo "$body" | jq -r '.max_repos')
+    upgrade_url=$(echo "$body" | jq -r '.upgrade_url')
+    echo "::warning title=oasdiff plan limit reached::${err_owner}/${err_repo} is beyond your plan's ${max_repos}-repository limit, so no review comment was posted. Upgrade at ${upgrade_url} to add it."
+    {
+        echo "### ⚠️ oasdiff plan limit reached"
+        echo ""
+        echo "Your oasdiff plan covers **${max_repos} repositories**. **${err_owner}/${err_repo}** is beyond that limit, so no review comment was posted for this pull request."
+        echo ""
+        echo "**To cover this repository:** [upgrade your plan](${upgrade_url})."
+        echo ""
+        echo "_Repositories already counted toward your plan are unaffected._"
+    } >> "$GITHUB_STEP_SUMMARY"
+    exit 0
 else
     echo "ERROR: oasdiff-service returned HTTP $http_code" >&2
     echo "$body" >&2
