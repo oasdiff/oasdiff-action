@@ -1,0 +1,137 @@
+name: test verify
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify_all_green:
+    runs-on: ubuntu-latest
+    name: Test verify reports all checks green and exits 0
+    # Stub oasdiff (specs resolve) + curl (service returns all checks true) and
+    # assert the entrypoint renders a full-green checklist and exits 0.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff + curl, run verify entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          exit 0
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          cat >/dev/null
+          printf '{"token_ok":true,"app_installed":true,"specs_found":true,"owner":"acme","repo":"api"}\n200\n'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          : > "$GITHUB_STEP_SUMMARY"
+          export PATH=/tmp/stub:$PATH
+
+          set +e
+          out=$(./verify/entrypoint.sh 'main:openapi.yaml' 'HEAD:openapi.yaml' 'stub-token' 'http://svc' 'false' 2>&1)
+          rc=$?
+          set -e
+          echo "--- output ---"; echo "$out"
+          echo "--- summary ---"; cat "$GITHUB_STEP_SUMMARY"
+          echo "--- exit $rc ---"
+
+          if [ "$rc" -ne 0 ]; then echo "FAIL: expected exit 0, got $rc" >&2; exit 1; fi
+          grep -q "✅ Connected to oasdiff" "$GITHUB_STEP_SUMMARY" || { echo "FAIL: token check not green" >&2; exit 1; }
+          grep -q "✅ oasdiff GitHub App installed" "$GITHUB_STEP_SUMMARY" || { echo "FAIL: app check not green" >&2; exit 1; }
+          grep -q "✅ OpenAPI spec found" "$GITHUB_STEP_SUMMARY" || { echo "FAIL: spec check not green" >&2; exit 1; }
+          echo "PASS"
+
+  verify_app_not_installed:
+    runs-on: ubuntu-latest
+    name: Test verify flags a missing App and exits 1
+    # Service reports app_installed=false: the entrypoint must mark that check
+    # red, emit an annotation, and exit 1 (setup not complete).
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff + curl (app not installed)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          exit 0
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          cat >/dev/null
+          printf '{"token_ok":true,"app_installed":false,"specs_found":true,"owner":"acme","repo":"api"}\n200\n'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          : > "$GITHUB_STEP_SUMMARY"
+          export PATH=/tmp/stub:$PATH
+
+          set +e
+          out=$(./verify/entrypoint.sh 'main:openapi.yaml' 'HEAD:openapi.yaml' 'stub-token' 'http://svc' 'false' 2>&1)
+          rc=$?
+          set -e
+          echo "--- output ---"; echo "$out"
+          echo "--- summary ---"; cat "$GITHUB_STEP_SUMMARY"
+          echo "--- exit $rc ---"
+
+          if [ "$rc" -ne 1 ]; then echo "FAIL: expected exit 1, got $rc" >&2; exit 1; fi
+          grep -q "❌ oasdiff GitHub App installed" "$GITHUB_STEP_SUMMARY" || { echo "FAIL: app check not red" >&2; exit 1; }
+          echo "$out" | grep -q "::error title=oasdiff verify::oasdiff GitHub App is not installed" || { echo "FAIL: missing app annotation" >&2; exit 1; }
+          echo "PASS"
+
+  verify_external_ref_blocked:
+    runs-on: ubuntu-latest
+    name: Test verify distinguishes a blocked external $ref (exit 123)
+    # oasdiff exits 123 when an external $ref is refused (allow-external-refs
+    # false). Verify must report that distinctly from "spec not found" — with
+    # the allow-external-refs hint, not a path hint — and exit 1.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff (exit 123) + curl
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          exit 123
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          cat >/dev/null
+          printf '{"token_ok":true,"app_installed":true,"specs_found":false,"owner":"acme","repo":"api"}\n200\n'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          : > "$GITHUB_STEP_SUMMARY"
+          export PATH=/tmp/stub:$PATH
+
+          set +e
+          out=$(./verify/entrypoint.sh 'main:openapi.yaml' 'HEAD:openapi.yaml' 'stub-token' 'http://svc' 'false' 2>&1)
+          rc=$?
+          set -e
+          echo "--- output ---"; echo "$out"
+          echo "--- summary ---"; cat "$GITHUB_STEP_SUMMARY"
+          echo "--- exit $rc ---"
+
+          if [ "$rc" -ne 1 ]; then echo "FAIL: expected exit 1, got $rc" >&2; exit 1; fi
+          grep -q "external \$ref was blocked" "$GITHUB_STEP_SUMMARY" || { echo "FAIL: external-ref case not surfaced distinctly" >&2; exit 1; }
+          if grep -q "Spec not found" "$GITHUB_STEP_SUMMARY"; then echo "FAIL: mislabeled as spec-not-found" >&2; exit 1; fi
+          echo "$out" | grep -q "allow-external-refs: true if the spec is trusted" || { echo "FAIL: missing allow-external-refs hint" >&2; exit 1; }
+          echo "PASS"

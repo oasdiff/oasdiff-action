@@ -18,6 +18,7 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
 - [Configuring with `.oasdiff.yaml`](#configuring-with-oasdiffyaml)
 - [Spec paths](#spec-paths)
 - [Pro: Rich PR comment](#pro-rich-pr-comment)
+- [Pro: Verify your setup](#pro-verify-your-setup)
 
 ## Quick start
 
@@ -35,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.49
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.51
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -65,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.0.49
+      - uses: oasdiff/oasdiff-action/breaking@v0.0.51
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -105,7 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0.0.49
+      - uses: oasdiff/oasdiff-action/changelog@v0.0.51
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -144,7 +145,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/diff@v0.0.49
+      - uses: oasdiff/oasdiff-action/diff@v0.0.51
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -178,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oasdiff/oasdiff-action/validate@v0.0.49
+      - uses: oasdiff/oasdiff-action/validate@v0.0.51
         with:
           spec: 'openapi.yaml'
 ```
@@ -218,7 +219,7 @@ The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions
 **Explicit path**: if your config lives somewhere else, set `OASDIFF_CONFIG` in the workflow `env:` to point at it:
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.0.49
+- uses: oasdiff/oasdiff-action/breaking@v0.0.51
   env:
     OASDIFF_CONFIG: ./config/oasdiff.yaml
   with:
@@ -270,7 +271,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.49
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.51
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -298,3 +299,56 @@ Each **Review** link opens a hosted page with a side-by-side spec diff and **App
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 
 [Get oasdiff Pro →](https://www.oasdiff.com/pricing)
+
+## Pro: Verify your setup
+
+`oasdiff/oasdiff-action/verify` is a read-only check that confirms your setup works end to end. It posts no PR comment and sets no commit status. Run it on demand from the **Actions** tab (the "Run workflow" button).
+
+Add it to the same workflow as `pr-comment`, guarded by event type, so one file handles both: `pr-comment` on pull requests, and `verify` when you click "Run workflow".
+
+```yaml
+name: oasdiff
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+jobs:
+  pr-comment:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.base_ref }}
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.0.52
+        with:
+          base: 'origin/${{ github.base_ref }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
+          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
+  verify:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: git fetch --depth=1 origin ${{ github.event.repository.default_branch }}
+      - uses: oasdiff/oasdiff-action/verify@v0.0.52
+        with:
+          base: 'origin/${{ github.event.repository.default_branch }}:openapi.yaml'
+          revision: 'HEAD:openapi.yaml'
+          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
+```
+
+The verify run renders a checklist in the workflow **Step Summary**:
+
+- ✅ GitHub Actions workflow is running
+- ✅ Connected to oasdiff (your `OASDIFF_TOKEN` secret)
+- ✅ oasdiff GitHub App installed on the repo
+- ✅ OpenAPI spec found and compared
+
+It exits non-zero with a one-line hint for any check that fails, so a verify run is a clear pass/fail. (Reviewer access is checked separately on your setup page.)
+
+| Input | Default | Description | Accepted values |
+|---|---|---|---|
+| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
+| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
+| `oasdiff-token` | — (required) | oasdiff API token, [sign up at oasdiff.com](https://www.oasdiff.com/pricing) | — |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false`; set `true` if your spec references external URLs | `true`, `false` |
