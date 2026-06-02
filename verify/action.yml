@@ -1,0 +1,29 @@
+name: 'OpenAPI Spec: Verify oasdiff setup'
+description: 'Verify your oasdiff Pro setup end to end. Read-only: posts no PR comment and sets no commit status.'
+inputs:
+  base:
+    description: 'Path of original OpenAPI spec in YAML or JSON format'
+    required: true
+  revision:
+    description: 'Path of revised OpenAPI spec in YAML or JSON format'
+    required: true
+  oasdiff-token:
+    description: 'oasdiff API token — sign up at oasdiff.com/pricing'
+    required: true
+  service-url:
+    description: 'oasdiff service base URL (override for testing)'
+    required: false
+    default: 'https://api.oasdiff.com'
+  allow-external-refs:
+    description: 'Allow external $refs in the spec; defaults to false (safe for CI on untrusted pull requests).'
+    required: false
+    default: 'false'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.base }}
+    - ${{ inputs.revision }}
+    - ${{ inputs.oasdiff-token }}
+    - ${{ inputs.service-url }}
+    - ${{ inputs.allow-external-refs }}
