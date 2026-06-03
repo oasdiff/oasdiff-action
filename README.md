@@ -4,6 +4,7 @@
 [![diff](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-diff.yaml)
 [![pr-comment](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-pr-comment.yaml)
 [![validate](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml)
+[![verify](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-verify.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-verify.yaml)
 
 GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
