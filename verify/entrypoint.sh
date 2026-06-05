@@ -77,6 +77,7 @@ payload=$(jq -nc \
 response=$(printf '%s' "$payload" | curl -s -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/verify" \
     -H "Content-Type: application/json" \
+    -H "User-Agent: oasdiff-action/${GITHUB_ACTION_REF:-unknown}" \
     --data-binary @-)
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
