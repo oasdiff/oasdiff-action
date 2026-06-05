@@ -125,7 +125,7 @@ if [ -n "$base_sha" ]; then
 else
     free_base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF")
 fi
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")"
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
 # Build the JSON payload. The `changes` array can be very large for
@@ -166,6 +166,7 @@ fi
 response=$(printf '%s' "$payload" | curl -s -w "\n%{http_code}" -X POST \
     "${service_url}/tenants/${oasdiff_token}/pr-comment" \
     -H "Content-Type: application/json" \
+    -H "User-Agent: oasdiff-action/${GITHUB_ACTION_REF:-unknown}" \
     --data-binary @-)
 
 http_code=$(echo "$response" | tail -1)
