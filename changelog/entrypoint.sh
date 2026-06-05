@@ -152,8 +152,7 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     # The Step Summary surfaces both the link (for visitors who'd rather use
     # the web UI) and the CLI command itself (for visitors who recognize it
     # and want to skip the instruction-page detour). GitHub renders the
-    # fenced code block with a built-in copy button. See
-    # enterprise/docs/cli-local-review.md (Phase 1, step 5).
+    # fenced code block with a built-in copy button.
     {
         echo "### 📋 [Review & approve these API changes](${free_review_url})"
         echo ""
