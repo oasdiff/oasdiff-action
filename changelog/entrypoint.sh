@@ -160,7 +160,7 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
         echo "Or run locally in your clone of \`${repo}\`:"
         echo ""
         echo '```bash'
-        echo "oasdiff changelog ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
+        echo "git fetch origin ${base_sha} ${head_sha} && oasdiff changelog ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
         echo '```'
     } >> "$GITHUB_STEP_SUMMARY"
 else
