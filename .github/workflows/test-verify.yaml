@@ -3,9 +3,6 @@ on:
   push:
   pull_request:
 
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   verify_all_green:
     runs-on: ubuntu-latest
@@ -13,12 +10,6 @@ jobs:
     # Stub oasdiff (specs resolve) + curl (service returns all checks true) and
     # assert the entrypoint renders a full-green checklist and exits 0.
     steps:
-      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff + curl, run verify entrypoint
         run: |
@@ -63,12 +54,6 @@ jobs:
     # Service reports app_installed=false: the entrypoint must mark that check
     # red, emit an annotation, and exit 1 (setup not complete).
     steps:
-      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff + curl (app not installed)
         run: |
@@ -113,12 +98,6 @@ jobs:
     # false). Verify must report that distinctly from "spec not found" — with
     # the allow-external-refs hint, not a path hint — and exit 1.
     steps:
-      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff (exit 123) + curl
         run: |
