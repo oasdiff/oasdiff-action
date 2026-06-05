@@ -2,11 +2,20 @@ name: validate
 on:
   pull_request:
   push:
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   oasdiff_validate_valid:
     runs-on: ubuntu-latest
     name: Test validate on a valid spec
     steps:
+      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
+        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Running validate action on a valid spec
@@ -25,6 +34,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Test validate fails on an invalid spec
     steps:
+      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
+        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Running validate action on an invalid spec
@@ -48,6 +63,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Test validate severity threshold (--fail-on)
     steps:
+      - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
+        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Validate a warning-only spec with the default threshold
