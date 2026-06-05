@@ -160,7 +160,6 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     # fenced code block with a built-in copy button, so the one-step path
     # for the familiar-visitor cohort is: scroll to the Checks tab, click
     # copy on the command, paste into a terminal in the local clone, run.
-    # See enterprise/docs/cli-local-review.md (Phase 1, step 5).
     {
         echo "### 📋 [Review & approve these breaking changes](${free_review_url})"
         echo ""
