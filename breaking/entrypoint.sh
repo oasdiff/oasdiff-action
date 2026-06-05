@@ -166,7 +166,7 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
         echo "Or run locally in your clone of \`${repo}\`:"
         echo ""
         echo '```bash'
-        echo "oasdiff breaking ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
+        echo "git fetch origin ${base_sha} ${head_sha} && oasdiff breaking ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
         echo '```'
     } >> "$GITHUB_STEP_SUMMARY"
 else
