@@ -2,20 +2,17 @@ name: pr-comment
 on:
   pull_request:
   push:
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   pr_comment_tolerates_oasdiff_fail_on:
     runs-on: ubuntu-latest
     name: Test pr-comment proceeds when oasdiff exits non-zero with output
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff to simulate fail-on triggered
         run: |
@@ -75,11 +72,11 @@ jobs:
     name: Test pr-comment aborts when oasdiff exits non-zero with no output
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff to simulate a real failure
         run: |
@@ -144,11 +141,11 @@ jobs:
     # payload successfully.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff to emit a multi-MB changelog
         run: |
@@ -227,11 +224,11 @@ jobs:
     # down. The fix pipes the payload through stdin via `--data-binary @-`.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff + curl, run entrypoint with a fake token
         run: |
@@ -324,11 +321,11 @@ jobs:
     # The fix passes URL-shaped inputs through unchanged.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff to a no-changes spec
         run: |
@@ -388,11 +385,11 @@ jobs:
     # this test guards the case-branch refactor against breaking it.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff to a no-changes spec
         run: |
@@ -443,11 +440,11 @@ jobs:
     # regressing to the generic non-2xx branch, which dumps raw JSON and exits 1.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - name: Stub oasdiff + curl (402), run entrypoint with a fake token
         run: |

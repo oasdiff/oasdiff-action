@@ -2,20 +2,17 @@ name: diff
 on:
   pull_request:
   push:
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   oasdiff_diff:
     runs-on: ubuntu-latest
     name: Test diff action
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Running diff action
@@ -37,11 +34,11 @@ jobs:
     name: Test diff action with exclude-elements option
     steps:
         - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-          if: ${{ env.DOCKERHUB_TOKEN != '' }}
+          if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           uses: docker/login-action@v3
           with:
-            username: ${{ env.DOCKERHUB_USERNAME }}
-            password: ${{ env.DOCKERHUB_TOKEN }}
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
         - name: checkout
           uses: actions/checkout@v6
         - name: Running diff action with exclude-elements option
@@ -68,11 +65,11 @@ jobs:
     name: Test diff action with composed option
     steps:
         - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-          if: ${{ env.DOCKERHUB_TOKEN != '' }}
+          if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           uses: docker/login-action@v3
           with:
-            username: ${{ env.DOCKERHUB_USERNAME }}
-            password: ${{ env.DOCKERHUB_TOKEN }}
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
         - name: checkout
           uses: actions/checkout@v6
         - name: Running diff action with composed option
@@ -99,11 +96,11 @@ jobs:
     name: Test diff action picks up exclude-elements from .oasdiff.yaml
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Drop .oasdiff.yaml at repo root

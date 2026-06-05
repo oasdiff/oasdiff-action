@@ -2,9 +2,6 @@ name: changelog
 on:
   pull_request:
   push:
-env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   oasdiff_changelog:
     runs-on: ubuntu-latest
@@ -13,11 +10,11 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "21 changes: 2 error, 4 warning, 15 info"
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Running changelog action
@@ -50,11 +47,11 @@ jobs:
     name: Test changelog action with composed option
     steps:
         - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-          if: ${{ env.DOCKERHUB_TOKEN != '' }}
+          if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           uses: docker/login-action@v3
           with:
-            username: ${{ env.DOCKERHUB_USERNAME }}
-            password: ${{ env.DOCKERHUB_TOKEN }}
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
         - name: checkout
           uses: actions/checkout@v6
         - name: Running changelog action with composed option
@@ -80,11 +77,11 @@ jobs:
     name: Test changelog action picks up level from .oasdiff.yaml
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v6
       - name: Drop .oasdiff.yaml at repo root
@@ -117,11 +114,11 @@ jobs:
     # review_url output.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - uses: ./changelog
         id: clog
@@ -156,11 +153,11 @@ jobs:
     # real git-ref resolution, the action's recommended base form.
     steps:
       - name: Log in to Docker Hub (raises the anonymous pull-rate limit on the action base image)
-        if: ${{ env.DOCKERHUB_TOKEN != '' }}
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v6
       - uses: ./changelog
         id: clog
