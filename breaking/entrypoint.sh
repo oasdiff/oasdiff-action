@@ -158,6 +158,9 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     wf_path="${wf_path%@*}"
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
     [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
+    # The PR base branch is where the workflow file lives; pass it so the page
+    # can deep-link the editable file (/edit/<branch>/<path>).
+    [ -n "$GITHUB_BASE_REF" ] && free_review_url="${free_review_url}&branch=$(urlencode "$GITHUB_BASE_REF")"
     # Step summary: a link to the /review page, which shows how to view these
     # changes side by side.
     {
