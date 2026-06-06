@@ -152,22 +152,20 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     # commit where the file lives at a different path.
     base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
+    # GITHUB_WORKFLOW_REF is "<owner>/<repo>/.github/workflows/<file>@<ref>";
+    # strip the repo prefix and the @ref suffix to get just the workflow file
+    # path, so the /review page can deep-link the exact file to bump the pin.
+    wf_path="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
+    wf_path="${wf_path%@*}"
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
-    echo "::notice::📋 Review & approve these breaking changes → ${free_review_url}"
-    # The Step Summary surfaces both the link (for visitors who'd rather use
-    # the web UI) and the CLI command itself (for visitors who recognize it
-    # and want to skip the instruction-page detour). GitHub renders the
-    # fenced code block with a built-in copy button, so the one-step path
-    # for the familiar-visitor cohort is: scroll to the Checks tab, click
-    # copy on the command, paste into a terminal in the local clone, run.
+    [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
+    # Thin step summary: a single link to the /review page, which renders the
+    # command, install help, and any upgrade nudge. Keeping that content on the
+    # page (server-controlled) rather than baking it here means we can improve it
+    # without shipping a new action version that every user has to upgrade to.
+    # The per-change ::error:: annotations above remain the inline CI signal.
     {
-        echo "### 📋 [Review & approve these breaking changes](${free_review_url})"
-        echo ""
-        echo "Or run locally in your clone of \`${repo}\`:"
-        echo ""
-        echo '```bash'
-        echo "git fetch origin ${base_sha} ${head_sha} && oasdiff breaking ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
-        echo '```'
+        echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})"
     } >> "$GITHUB_STEP_SUMMARY"
 else
     write_output "No breaking changes"
