@@ -153,17 +153,13 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
     # GITHUB_WORKFLOW_REF is "<owner>/<repo>/.github/workflows/<file>@<ref>";
-    # strip the repo prefix and the @ref suffix to get just the workflow file
-    # path, so the /review page can deep-link the exact file to bump the pin.
+    # strip the repo prefix and the @ref suffix to get the workflow file path.
     wf_path="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
     wf_path="${wf_path%@*}"
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
     [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
-    # Thin step summary: a single link to the /review page, which renders the
-    # command, install help, and any upgrade nudge. Keeping that content on the
-    # page (server-controlled) rather than baking it here means we can improve it
-    # without shipping a new action version that every user has to upgrade to.
-    # The per-change ::error:: annotations above remain the inline CI signal.
+    # Step summary: a link to the /review page, which shows how to view these
+    # changes side by side.
     {
         echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})"
     } >> "$GITHUB_STEP_SUMMARY"
