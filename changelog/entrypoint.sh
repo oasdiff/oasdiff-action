@@ -147,20 +147,16 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     # commit where the file lives at a different path.
     base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
     if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
+    # GITHUB_WORKFLOW_REF is "<owner>/<repo>/.github/workflows/<file>@<ref>";
+    # strip the repo prefix and the @ref suffix to get the workflow file path.
+    wf_path="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
+    wf_path="${wf_path%@*}"
     free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
-    echo "::notice::📋 Review & approve these API changes → ${free_review_url}"
-    # The Step Summary surfaces both the link (for visitors who'd rather use
-    # the web UI) and the CLI command itself (for visitors who recognize it
-    # and want to skip the instruction-page detour). GitHub renders the
-    # fenced code block with a built-in copy button.
+    [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
+    # Step summary: a link to the /review page, which shows how to view these
+    # changes side by side.
     {
-        echo "### 📋 [Review & approve these API changes](${free_review_url})"
-        echo ""
-        echo "Or run locally in your clone of \`${repo}\`:"
-        echo ""
-        echo '```bash'
-        echo "git fetch origin ${base_sha} ${head_sha} && oasdiff changelog ${base_sha}:${base_path} ${head_sha}:${rev_path} --open"
-        echo '```'
+        echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})"
     } >> "$GITHUB_STEP_SUMMARY"
 else
     write_output "No changelog changes"
