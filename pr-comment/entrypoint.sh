@@ -115,6 +115,19 @@ strip_ref_prefix() {
 }
 base_path=$(strip_ref_prefix "$base")
 rev_path=$(strip_ref_prefix "$revision")
+# Classify each source so the /review page gives exact guidance instead of
+# guessing: a URL, a git ref (ref:path), or a local file (e.g. a generated
+# baseline that isn't committed). The page can't tell these apart from the
+# stripped path alone.
+classify_kind() {
+    case "$1" in
+        http://*|https://*) printf 'url' ;;
+        *:*)                printf 'gitref' ;;
+        *)                  printf 'file' ;;
+    esac
+}
+base_kind=$(classify_kind "$base")
+rev_kind=$(classify_kind "$revision")
 # Prefer the base SHA over the branch name so the link is commit-pinned.
 # Fall back through `git rev-parse origin/<branch>` before resorting to
 # the branch name itself, so push-event triggers (no pull_request payload)
@@ -125,7 +138,7 @@ if [ -n "$base_sha" ]; then
 else
     free_base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF")
 fi
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
+free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&base_kind=${base_kind}&rev_kind=${rev_kind}&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
 echo "::notice::📋 View API changes → ${free_review_url}"
 
 # Build the JSON payload. The `changes` array can be very large for

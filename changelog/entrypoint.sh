@@ -135,6 +135,19 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     }
     base_path=$(strip_ref_prefix "$base")
     rev_path=$(strip_ref_prefix "$revision")
+    # Classify each source so the /review page gives exact guidance instead of
+    # guessing: a URL, a git ref (ref:path), or a local file (e.g. a generated
+    # baseline that isn't committed). The page can't tell these apart from the
+    # stripped path alone.
+    classify_kind() {
+        case "$1" in
+            http://*|https://*) printf 'url' ;;
+            *:*)                printf 'gitref' ;;
+            *)                  printf 'file' ;;
+        esac
+    }
+    base_kind=$(classify_kind "$base")
+    rev_kind=$(classify_kind "$revision")
     owner="${GITHUB_REPOSITORY%%/*}"
     repo="${GITHUB_REPOSITORY#*/}"
     head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
@@ -151,7 +164,7 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     # strip the repo prefix and the @ref suffix to get the workflow file path.
     wf_path="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
     wf_path="${wf_path%@*}"
-    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
+    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&base_kind=${base_kind}&rev_kind=${rev_kind}&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
     [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
     # The PR base branch is where the workflow file lives; pass it so the page
     # can deep-link the editable file (/edit/<branch>/<path>).
