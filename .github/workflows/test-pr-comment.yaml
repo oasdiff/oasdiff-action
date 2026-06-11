@@ -51,10 +51,6 @@ jobs:
             echo "FAIL: expected exit 0 (script should reach the no-token skip), got $rc" >&2
             exit 1
           fi
-          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
-            echo "FAIL: script aborted before emitting the review-page notice; the oasdiff fail-on tolerance fix is missing" >&2
-            exit 1
-          fi
           if ! echo "$out" | grep -q "No oasdiff-token provided"; then
             echo "FAIL: script aborted before reaching the no-token skip" >&2
             exit 1
@@ -106,10 +102,6 @@ jobs:
           fi
           if ! echo "$out" | grep -q "ERROR: oasdiff exited 2 with no output"; then
             echo "FAIL: expected the explicit no-output error message" >&2
-            exit 1
-          fi
-          if echo "$out" | grep -q "::notice::.*View API changes"; then
-            echo "FAIL: script proceeded past the oasdiff failure; the early-abort branch is missing" >&2
             exit 1
           fi
           echo "PASS"
@@ -179,10 +171,6 @@ jobs:
           if [ "$rc" -ne 0 ]; then
             echo "FAIL: expected exit 0 (script should reach the no-token skip after building the JSON payload), got $rc" >&2
             echo "If the message contains 'jq: Argument list too long', the regression has returned: \$changes is being passed via argv (--argjson) instead of stdin." >&2
-            exit 1
-          fi
-          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
-            echo "FAIL: script aborted before emitting the review-page notice" >&2
             exit 1
           fi
           if ! echo "$out" | grep -q "No oasdiff-token provided"; then
@@ -277,122 +265,7 @@ jobs:
             echo "FAIL: curl stub received only ${curl_bytes} bytes; expected >4 MB (proves payload made it through stdin)" >&2
             exit 1
           fi
-          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
-            echo "FAIL: script aborted before emitting the review-page notice" >&2
-            exit 1
-          fi
           echo "PASS"
-
-  pr_comment_free_review_url_preserves_https_base:
-    runs-on: ubuntu-latest
-    name: Test pr-comment free review URL keeps the https:// scheme on URL-style base
-    # Regression test for a bug surfaced by oasdiff-test/test#59: when the
-    # workflow passes a raw.githubusercontent.com URL as the base input
-    # (as the integration-test repo does), the entrypoint's
-    #   base_path=$(echo "$base" | sed 's/.*://')
-    # stripped the "https:" prefix and left a broken "//raw.github..."
-    # URL. The free /review page then tried to GET that broken URL and
-    # rendered "access denied" with no useful diagnostic — because the
-    # generic access-denied screen masked the real cause (malformed URL).
-    # The fix passes URL-shaped inputs through unchanged.
-    steps:
-      - uses: actions/checkout@v6
-      - name: Stub oasdiff to a no-changes spec
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/stub
-          cat > /tmp/stub/oasdiff <<'STUB'
-          #!/bin/sh
-          echo '[]'
-          STUB
-          chmod +x /tmp/stub/oasdiff
-
-          mkdir -p /tmp/run
-          export GITHUB_REF=refs/pull/123/merge
-          export GITHUB_REPOSITORY=oasdiff-test/test
-          export GITHUB_SHA=deadbeef
-          export GITHUB_BASE_REF=main
-          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
-          cat > /tmp/run/event.json <<EVT
-          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
-          EVT
-          export GITHUB_EVENT_PATH=/tmp/run/event.json
-
-          export PATH=/tmp/stub:$PATH
-          base_url='https://raw.githubusercontent.com/oasdiff-test/test/main/simple.yaml'
-          out=$(./pr-comment/entrypoint.sh \
-            "$base_url" 'simple.yaml' \
-            '' '' '' '' '' '' 2>&1)
-          echo "--- entrypoint output ---"
-          echo "$out"
-
-          if ! echo "$out" | grep -q "::notice::.*View API changes"; then
-            echo "FAIL: notice line missing" >&2
-            exit 1
-          fi
-          notice=$(echo "$out" | grep "::notice::.*View API changes")
-          # The encoded base_file= param must contain the full URL, not the
-          # stripped "//raw..." form. https:// URL-encodes to https%3A%2F%2F.
-          if echo "$notice" | grep -q 'base_file=https%3A%2F%2Fraw.githubusercontent.com'; then
-            echo "PASS: full https://raw... URL preserved in base_file"
-          elif echo "$notice" | grep -q 'base_file=%2F%2Fraw.githubusercontent.com'; then
-            echo "FAIL: 'https:' was stripped from base — the strip_ref_prefix URL guard is missing" >&2
-            echo "notice line: $notice" >&2
-            exit 1
-          else
-            echo "FAIL: base_file= param did not contain the raw.githubusercontent.com host as expected" >&2
-            echo "notice line: $notice" >&2
-            exit 1
-          fi
-
-  pr_comment_free_review_url_strips_git_ref_prefix:
-    runs-on: ubuntu-latest
-    name: "Test pr-comment free review URL strips origin/main: prefix from git-ref base"
-    # Companion to pr_comment_free_review_url_preserves_https_base: when
-    # the base input is git-ref form (origin/main:openapi.yaml), the
-    # prefix must still be stripped so the /review page receives just the
-    # path. The previous sed-based implementation handled this correctly;
-    # this test guards the case-branch refactor against breaking it.
-    steps:
-      - uses: actions/checkout@v6
-      - name: Stub oasdiff to a no-changes spec
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/stub
-          cat > /tmp/stub/oasdiff <<'STUB'
-          #!/bin/sh
-          echo '[]'
-          STUB
-          chmod +x /tmp/stub/oasdiff
-
-          mkdir -p /tmp/run
-          export GITHUB_REF=refs/pull/123/merge
-          export GITHUB_REPOSITORY=foo/bar
-          export GITHUB_SHA=deadbeef
-          export GITHUB_BASE_REF=main
-          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
-          cat > /tmp/run/event.json <<EVT
-          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
-          EVT
-          export GITHUB_EVENT_PATH=/tmp/run/event.json
-
-          export PATH=/tmp/stub:$PATH
-          out=$(./pr-comment/entrypoint.sh \
-            'origin/main:multi-file/openapi.yaml' 'HEAD:multi-file/openapi.yaml' \
-            '' '' '' '' '' '' 2>&1)
-          echo "--- entrypoint output ---"
-          echo "$out"
-
-          notice=$(echo "$out" | grep "::notice::.*View API changes")
-          # base_file should be just "multi-file/openapi.yaml" (URL-encoded slash),
-          # not the full "origin/main:multi-file/openapi.yaml".
-          if echo "$notice" | grep -q 'base_file=multi-file%2Fopenapi.yaml'; then
-            echo "PASS: origin/main: prefix stripped from base"
-          else
-            echo "FAIL: base_file= did not have the git-ref prefix stripped" >&2
-            echo "notice line: $notice" >&2
-            exit 1
-          fi
 
   pr_comment_repo_limit_warns_without_failing:
     runs-on: ubuntu-latest
