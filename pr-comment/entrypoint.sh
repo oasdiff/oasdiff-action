@@ -95,39 +95,6 @@ base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH")
 owner="${GITHUB_REPOSITORY%%/*}"
 repo="${GITHUB_REPOSITORY#*/}"
 
-# Emit free review annotation (public repos only — no auth required)
-urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-# Resolve the on-disk / on-repo path portion of `base` and `revision` for
-# the free /review URL. Two input shapes are supported:
-#
-#   1. Git-ref form  — "origin/main:openapi.yaml" or "HEAD:openapi.yaml".
-#      The sed strips everything up to the colon so we keep just the path.
-#   2. URL form      — "https://raw.githubusercontent.com/o/r/main/foo.yaml".
-#      The naive sed would also strip "https:" and leave a broken
-#      "//raw.githubusercontent.com/..." which the /review page then can't
-#      fetch (it renders as the access-denied screen with a misleading
-#      "owner doesn't have access" message). Pass URLs through unchanged.
-strip_ref_prefix() {
-    case "$1" in
-        http://*|https://*) printf '%s' "$1" ;;
-        *)                  printf '%s' "$1" | sed 's/.*://' ;;
-    esac
-}
-base_path=$(strip_ref_prefix "$base")
-rev_path=$(strip_ref_prefix "$revision")
-# Prefer the base SHA over the branch name so the link is commit-pinned.
-# Fall back through `git rev-parse origin/<branch>` before resorting to
-# the branch name itself, so push-event triggers (no pull_request payload)
-# also get an immutable SHA in the URL whenever the base branch was
-# fetched into the workspace.
-if [ -n "$base_sha" ]; then
-    free_base_sha="$base_sha"
-else
-    free_base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF")
-fi
-free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$free_base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
-echo "::notice::📋 View API changes → ${free_review_url}"
-
 # Build the JSON payload. The `changes` array can be very large for
 # complex specs (one real-world report was observed at thousands of
 # entries running into the megabytes), so it's piped via stdin rather
