@@ -76,7 +76,7 @@ post_review_comment () {
         body="${marker}
 ### 📋 [View the side-by-side API change review](${review_url})
 
-The two specs were encrypted in CI before upload and the decryption key stays in this link, so oasdiff cannot read them. Anyone with the link can open the review; it expires after 7 days."
+The two specs were encrypted in CI before upload and the decryption key stays in this link, so oasdiff cannot read them. Anyone with the link can open the review; it expires after 7 days. [How this works, and how to turn it off →](https://www.oasdiff.com/docs/free-review)"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No API changes in the latest revision."
