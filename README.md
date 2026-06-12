@@ -54,7 +54,7 @@ The following actions run the oasdiff CLI directly in your GitHub runner — no 
 
 ### Check for breaking changes
 
-Detects breaking changes and writes inline GitHub annotations to the Actions summary. Fails the workflow when changes at or above the `fail-on` severity are found.
+Detects breaking changes and writes inline `::error::` annotations on the pull request's Files changed tab. Fails the workflow when changes at or above the `fail-on` severity are found. When changes are found it also uploads the comparison and adds a link to a full side-by-side review in the job summary (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them.
 
 ```yaml
 name: oasdiff
@@ -95,7 +95,7 @@ jobs:
 
 ### Generate a changelog
 
-Outputs all changes (breaking and non-breaking) between two specs.
+Outputs all changes (breaking and non-breaking) between two specs. When changes are found it also uploads the comparison and adds a link to a full side-by-side review in the job summary (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them.
 
 ```yaml
 name: oasdiff
