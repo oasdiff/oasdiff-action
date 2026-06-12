@@ -61,7 +61,7 @@ inputs:
     required: false
     default: 'true'
   github-token:
-    description: 'GitHub token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Pass ${{ github.token }} and grant the job permissions: pull-requests: write. Optional; when omitted the link is written only to the job summary. On fork pull requests the token is read-only, so commenting is skipped and the link falls back to the job summary.'
+    description: 'GitHub token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Pass the built-in github.token and grant the job permissions: pull-requests: write. Optional; when omitted the link is written only to the job summary. On fork pull requests the token is read-only, so commenting is skipped and the link falls back to the job summary.'
     required: false
     default: ''
 outputs:
