@@ -60,6 +60,10 @@ inputs:
     description: 'Upload the comparison to oasdiff.com (encrypted, zero-knowledge) and link straight to a side-by-side review of these changes. The specs are encrypted client-side and the key stays in the URL fragment, so the server cannot read them. Set to false to skip the upload entirely, so no spec leaves CI; the change detection and inline annotations are unaffected.'
     required: false
     default: 'true'
+  github-token:
+    description: 'GitHub token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Pass ${{ github.token }} and grant the job permissions: pull-requests: write. Optional; when omitted the link is written only to the job summary. On fork pull requests the token is read-only, so commenting is skipped and the link falls back to the job summary.'
+    required: false
+    default: ''
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
@@ -85,3 +89,4 @@ runs:
     - ${{ inputs.output-to-file }}
     - ${{ inputs.allow-external-refs }}
     - ${{ inputs.review }}
+    - ${{ inputs.github-token }}

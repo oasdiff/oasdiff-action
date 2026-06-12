@@ -22,6 +22,69 @@ readonly warn_ignore="${13}"
 readonly output_to_file="${14}"
 readonly allow_external_refs="${15}"
 readonly review="${16}"
+readonly github_token="${17}"
+
+# post_review_comment posts (or updates) a single pull-request comment with the
+# free side-by-side review link, so reviewers see it on the PR rather than only
+# in the job summary (a low-traffic page most users never open). Best-effort and
+# never fatal: it needs a github-token with pull-requests:write and a
+# pull_request event. On fork pull requests GITHUB_TOKEN is read-only, so the
+# API call returns 403 and we fall back to the job summary, which is always
+# written regardless.
+#
+# $1: the review URL, or empty to mark the PR as having no breaking changes
+#     (in that case it only updates an existing comment, never creates one, so
+#     a PR that never had changes stays comment-free).
+post_review_comment () {
+    review_url="$1"
+    [ -z "$github_token" ] && return 0
+    pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
+    [ -z "$pr_number" ] && return 0
+    owner="${GITHUB_REPOSITORY%%/*}"
+    repo="${GITHUB_REPOSITORY#*/}"
+    api="${GITHUB_API_URL:-https://api.github.com}"
+    marker="<!-- oasdiff-free-review -->"
+
+    # Find an existing oasdiff comment to update so we don't post a fresh
+    # comment on every push.
+    existing_id=$(curl -s \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "${api}/repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100" 2>/dev/null \
+        | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
+
+    if [ -n "$review_url" ]; then
+        body="${marker}
+### 📋 [View the side-by-side API change review](${review_url})
+
+The two specs were encrypted in CI before upload and the decryption key stays in this link, so oasdiff cannot read them. Anyone with the link can open the review; it expires after 7 days."
+    elif [ -n "$existing_id" ]; then
+        body="${marker}
+### ✅ No breaking changes in the latest revision."
+    else
+        return 0
+    fi
+
+    payload=$(jq -n --arg body "$body" '{body: $body}')
+    if [ -n "$existing_id" ]; then
+        endpoint="${api}/repos/${owner}/${repo}/issues/comments/${existing_id}"
+        method="PATCH"
+    else
+        endpoint="${api}/repos/${owner}/${repo}/issues/${pr_number}/comments"
+        method="POST"
+    fi
+
+    code=$(printf '%s' "$payload" | curl -s -o /dev/null -w "%{http_code}" -X "$method" \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "$endpoint" --data-binary @- 2>/dev/null) || code="000"
+
+    if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+        echo "oasdiff: posted the side-by-side review link as a PR comment."
+    else
+        echo "::notice::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is still in the job summary."
+    fi
+}
 
 write_output () {
     local output="$1"
@@ -146,6 +209,9 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
             | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
         if [ -n "$free_review_url" ]; then
             echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+            # Also surface the link on the PR itself (best-effort) so reviewers
+            # don't have to find the job summary.
+            post_review_comment "$free_review_url"
         else
             # review was requested but no link came back: an offline runner,
             # oasdiff.com unreachable, or an older oasdiff in the base image.
@@ -157,6 +223,11 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     fi
 else
     write_output "No breaking changes"
+    # Keep an existing review comment honest when a later push fixes the
+    # breaking changes; never create one for an always-clean PR.
+    if [ "$review" != "false" ]; then
+        post_review_comment ""
+    fi
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
