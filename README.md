@@ -91,6 +91,7 @@ jobs:
 | `warn-ignore` | `''` | Path to a file containing regex patterns for warning-level changes to ignore | file path |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
+| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and put a direct side-by-side review link in the job summary. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
 
 ### Generate a changelog
 
@@ -130,6 +131,7 @@ jobs:
 | `template` | `''` | Custom Go template for output formatting | Go template string |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
+| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and put a direct side-by-side review link in the job summary. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
 
 ### Generate a diff report
 

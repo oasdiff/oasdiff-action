@@ -56,6 +56,10 @@ inputs:
     description: 'Allow external $refs in the spec; disable to prevent SSRF when processing untrusted specs. Defaults to false (safe for CI on untrusted pull requests).'
     required: false
     default: 'false'
+  review:
+    description: 'Upload the comparison to oasdiff.com (encrypted, zero-knowledge) and link straight to a side-by-side review of these changes. The specs are encrypted client-side and the key stays in the URL fragment, so the server cannot read them. Set to false to skip the upload entirely, so no spec leaves CI; the change detection and inline annotations are unaffected.'
+    required: false
+    default: 'true'
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
@@ -80,3 +84,4 @@ runs:
     - ${{ inputs.warn-ignore }}
     - ${{ inputs.output-to-file }}
     - ${{ inputs.allow-external-refs }}
+    - ${{ inputs.review }}

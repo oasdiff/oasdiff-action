@@ -40,6 +40,7 @@ readonly format="${12}"
 readonly template="${13}"
 readonly level="${14}"
 readonly allow_external_refs="${15}"
+readonly review="${16}"
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
 
@@ -121,46 +122,34 @@ rm -f "$_err"
 
 if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     write_output "$output"
-    # Emit upgrade notice pointing to the free review page
-    urlencode() { printf '%s' "$1" | jq -sRr @uri; }
-    # Strip the git-ref prefix ("origin/main:openapi.yaml" -> "openapi.yaml")
-    # but pass http(s):// URLs through unchanged. A naive `sed 's/.*://'` would
-    # also eat "https:" and emit a broken "//host/..." that the /review page
-    # can't fetch (it renders the misleading access-denied screen).
-    strip_ref_prefix() {
-        case "$1" in
-            http://*|https://*) printf '%s' "$1" ;;
-            *)                  printf '%s' "$1" | sed 's/.*://' ;;
-        esac
-    }
-    base_path=$(strip_ref_prefix "$base")
-    rev_path=$(strip_ref_prefix "$revision")
-    owner="${GITHUB_REPOSITORY%%/*}"
-    repo="${GITHUB_REPOSITORY#*/}"
-    head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
-    if [ -z "$head_sha" ]; then head_sha="$GITHUB_SHA"; fi
-    # base_sha must be an immutable commit SHA, not the branch name. Using
-    # $GITHUB_BASE_REF (the branch) makes the URL decay whenever the branch
-    # advances past the file's commit, e.g. someone merges a rename of the
-    # spec file and every previously-emitted /review URL starts 404'ing
-    # because raw.githubusercontent.com now resolves the branch to a newer
-    # commit where the file lives at a different path.
-    base_sha=$(jq -r '.pull_request.base.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
-    if [ -z "$base_sha" ]; then base_sha=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "$GITHUB_BASE_REF"); fi
-    # GITHUB_WORKFLOW_REF is "<owner>/<repo>/.github/workflows/<file>@<ref>";
-    # strip the repo prefix and the @ref suffix to get the workflow file path.
-    wf_path="${GITHUB_WORKFLOW_REF#"$GITHUB_REPOSITORY"/}"
-    wf_path="${wf_path%@*}"
-    free_review_url="https://www.oasdiff.com/review?owner=${owner}&repo=${repo}&base_sha=$(urlencode "$base_sha")&rev_sha=${head_sha}&base_file=$(urlencode "$base_path")&rev_file=$(urlencode "$rev_path")&action_version=$(urlencode "${GITHUB_ACTION_REF:-unknown}")"
-    [ -n "$wf_path" ] && free_review_url="${free_review_url}&workflow=$(urlencode "$wf_path")"
-    # The PR base branch is where the workflow file lives; pass it so the page
-    # can deep-link the editable file (/edit/<branch>/<path>).
-    [ -n "$GITHUB_BASE_REF" ] && free_review_url="${free_review_url}&branch=$(urlencode "$GITHUB_BASE_REF")"
-    # Step summary: a link to the /review page, which shows how to view these
-    # changes side by side.
-    {
-        echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})"
-    } >> "$GITHUB_STEP_SUMMARY"
+
+    free_review_url=""
+    # review (default true): upload the comparison to oasdiff.com and link
+    # straight to the rendered side-by-side review. The upload is
+    # zero-knowledge -- the oasdiff binary encrypts the two specs client-side
+    # and the decryption key lives only in the URL #fragment, so the server
+    # stores a blob it cannot read. Set review: false to skip the upload
+    # entirely, so no spec ever leaves CI; the changelog output and the inline
+    # annotations are unaffected either way.
+    if [ "$review" != "false" ]; then
+        # Reuse the same semantic flags as the diff above so the uploaded
+        # comparison matches. --open prints the review URL on stdout; in CI the
+        # browser-open step soft-fails. We grep the /review/e/ URL out by its
+        # stable path shape (not by surrounding prose). Tolerate a non-zero
+        # exit / no match so `set -e` doesn't abort the run.
+        free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
+            | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
+        if [ -n "$free_review_url" ]; then
+            echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+        else
+            # review was requested but no link came back: an offline runner,
+            # oasdiff.com unreachable, or an older oasdiff in the base image.
+            # Warn rather than emit a link -- there's no useful local fallback
+            # (if the upload failed because the host is unreachable, a manual
+            # run would fail the same way), and the changelog above still stands.
+            echo "::warning::oasdiff: couldn't upload the side-by-side review (the changelog still ran). Re-run the job, or set 'review: false' to skip the upload."
+        fi
+    fi
 else
     write_output "No changelog changes"
 fi
