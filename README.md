@@ -31,6 +31,9 @@ name: oasdiff
 on:
   pull_request:
     branches: [ "main" ]
+permissions:
+  contents: read
+  pull-requests: write   # lets the action post the review link as a PR comment
 jobs:
   breaking-changes:
     runs-on: ubuntu-latest
@@ -42,9 +45,10 @@ jobs:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           fail-on: WARN
+          github-token: ${{ github.token }}
 ```
 
-This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found.
+This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found. When changes are found it posts a side-by-side review link as a PR comment; drop `github-token` and the `pull-requests: write` permission to keep that link in the job summary instead.
 
 ---
 
@@ -54,13 +58,16 @@ The following actions run the oasdiff CLI directly in your GitHub runner — no 
 
 ### Check for breaking changes
 
-Detects breaking changes and writes inline `::error::` annotations on the pull request's Files changed tab. Fails the workflow when changes at or above the `fail-on` severity are found. When changes are found it also uploads the comparison and adds a link to a full side-by-side review in the job summary (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them.
+Detects breaking changes and writes inline `::error::` annotations on the pull request's Files changed tab. Fails the workflow when changes at or above the `fail-on` severity are found. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The link is posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, it falls back to the job summary.
 
 ```yaml
 name: oasdiff
 on:
   pull_request:
     branches: [ "main" ]
+permissions:
+  contents: read
+  pull-requests: write   # lets the action post the review link as a PR comment
 jobs:
   breaking-changes:
     runs-on: ubuntu-latest
@@ -72,6 +79,7 @@ jobs:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           fail-on: WARN
+          github-token: ${{ github.token }}
 ```
 
 | Input | Default | Description | Accepted values |
@@ -91,17 +99,21 @@ jobs:
 | `warn-ignore` | `''` | Path to a file containing regex patterns for warning-level changes to ignore | file path |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
-| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and put a direct side-by-side review link in the job summary. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
+| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
+| `github-token` | `''` | Token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Pass `${{ github.token }}` and grant `permissions: pull-requests: write`. Optional; omit it to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | `${{ github.token }}` |
 
 ### Generate a changelog
 
-Outputs all changes (breaking and non-breaking) between two specs. When changes are found it also uploads the comparison and adds a link to a full side-by-side review in the job summary (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them.
+Outputs all changes (breaking and non-breaking) between two specs. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The link is posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, it falls back to the job summary.
 
 ```yaml
 name: oasdiff
 on:
   pull_request:
     branches: [ "main" ]
+permissions:
+  contents: read
+  pull-requests: write   # lets the action post the review link as a PR comment
 jobs:
   changelog:
     runs-on: ubuntu-latest
@@ -112,6 +124,7 @@ jobs:
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
+          github-token: ${{ github.token }}
 ```
 
 | Input | Default | Description | Accepted values |
@@ -131,7 +144,8 @@ jobs:
 | `template` | `''` | Custom Go template for output formatting | Go template string |
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
-| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and put a direct side-by-side review link in the job summary. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
+| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
+| `github-token` | `''` | Token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Pass `${{ github.token }}` and grant `permissions: pull-requests: write`. Optional; omit it to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | `${{ github.token }}` |
 
 ### Generate a diff report
 
