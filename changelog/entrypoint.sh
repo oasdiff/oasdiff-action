@@ -78,7 +78,7 @@ post_review_comment () {
 
 See exactly what changed, in context. Share this link with your team: anyone can open the review, no install and no account needed. It expires in 7 days.
 
-🔒 Your specs stay private. They're encrypted before upload, and only this link can unlock them. [How it works →](https://www.oasdiff.com/docs/free-review)"
+🔒 Your specs stay private. They're encrypted before upload, and only this link can unlock them. [How it works →](https://www.oasdiff.com/docs/free-review#privacy)"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No API changes in the latest revision."
