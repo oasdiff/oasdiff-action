@@ -76,7 +76,9 @@ post_review_comment () {
         body="${marker}
 ### 📋 [View the side-by-side API change review](${review_url})
 
-The two specs were encrypted in CI before upload and the decryption key stays in this link, so oasdiff cannot read them. Anyone with the link can open the review; it expires after 7 days. [How this works, and how to turn it off →](https://www.oasdiff.com/docs/free-review)"
+See exactly what changed, in context. Share this link with your team: anyone can open the review, no install and no account needed. It expires in 7 days.
+
+🔒 Your specs stay private. They're encrypted before upload, and only this link can unlock them. [How it works →](https://www.oasdiff.com/docs/free-review)"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No API changes in the latest revision."
