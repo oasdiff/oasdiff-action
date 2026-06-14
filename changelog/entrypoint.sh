@@ -134,9 +134,10 @@ fi
 if [ -n "$filter_extension" ]; then
     flags="$flags --filter-extension $filter_extension"
 fi
-if [ "$composed" = "true" ]; then
-    flags="$flags -c"
-fi
+# Pin composed to the action input so a 'composed' setting in .oasdiff.yaml can't
+# desync oasdiff's mode from the action's logic (the --open guard and flag
+# building both key off this input). A cmd-line flag overrides config.
+flags="$flags --composed=$composed"
 if [ "$flatten_allof" = "true" ]; then
     flags="$flags --flatten-allof"
 fi
@@ -179,13 +180,13 @@ echo "changelog<<$delimiter" >>"$GITHUB_OUTPUT"
 exit_code=0
 _err=$(mktemp)
 output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags 2>"$_err") || exit_code=$?
-if [ "$exit_code" -ne 0 ]; then
+# Only codes >=2 are real errors. Exit 1 is a fail-on result (the changelog
+# action has no fail-on input, but .oasdiff.yaml can set one); the changelog
+# action doesn't gate, so don't let it abort the run or suppress the review below.
+if [ "$exit_code" -ge 2 ]; then
     [ -s "$_err" ] && cat "$_err" >&2
-    # Promote a genuine failure to a Checks-tab annotation. Exit 1 is the
-    # intended fail-on result (not an error); only codes >=2 are real errors.
-    if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
-        echo "::error::$(tr '\n' ' ' < "$_err")"
-    fi
+    # Promote a genuine failure to a Checks-tab annotation.
+    [ -s "$_err" ] && echo "::error::$(tr '\n' ' ' < "$_err")"
     # Exit code 123 = oasdiff refused a disallowed external $ref (stable
     # contract, not message text). Surface the action-specific remedy.
     if [ "$exit_code" -eq 123 ]; then
@@ -202,9 +203,11 @@ rm -f "$_err"
 # exit 1 means the changelog has at least one change at or above --level, exit 0
 # means it's empty. --level stays in $flags so detection matches what the user
 # sees; the explicit --fail-on overrides any config fail-on for this probe only,
-# and the rendered run above is untouched.
+# and the rendered run above is untouched. --template= overrides a 'template' set
+# in .oasdiff.yaml, which would otherwise error this probe (templates are rejected
+# for the default text format) and make it a false negative.
 changes_exit=0
-oasdiff changelog "$base" "$revision" $flags --fail-on=INFO >/dev/null 2>&1 || changes_exit=$?
+oasdiff changelog "$base" "$revision" $flags --fail-on=INFO --template= >/dev/null 2>&1 || changes_exit=$?
 if [ "$changes_exit" -eq 1 ]; then
     write_output "$output"
 
@@ -227,8 +230,11 @@ if [ "$changes_exit" -eq 1 ]; then
             # --open prints the review URL on stdout; in CI the browser-open
             # step soft-fails. We grep the /review/e/ URL out by its stable path
             # shape (not by surrounding prose). Tolerate a non-zero exit / no
-            # match so `set -e` doesn't abort the run.
-            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
+            # match so `set -e` doesn't abort the run. --template= overrides a
+            # 'template' set in .oasdiff.yaml, which would otherwise error this
+            # render (templates are rejected for the default text format) and
+            # yield no URL.
+            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open --template= 2>/dev/null \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
                 echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"

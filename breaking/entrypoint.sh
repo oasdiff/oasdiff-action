@@ -143,9 +143,10 @@ fi
 if [ -n "$filter_extension" ]; then
     flags="$flags --filter-extension $filter_extension"
 fi
-if [ "$composed" = "true" ]; then
-    flags="$flags -c"
-fi
+# Pin composed to the action input so a 'composed' setting in .oasdiff.yaml can't
+# desync oasdiff's mode from the action's logic (the --open guard and flag
+# building both key off this input). A cmd-line flag overrides config.
+flags="$flags --composed=$composed"
 if [ "$flatten_allof" = "true" ]; then
     flags="$flags --flatten-allof"
 fi
@@ -186,8 +187,10 @@ rm -f "$_err"
 # Run 2: render annotations to stdout via --format githubactions so
 # GitHub parses them onto the PR's "Files changed" tab. Tolerate
 # non-zero exit (could be triggered by oasdiff.yaml fail-on); the
-# authoritative exit code is from Run 1.
-oasdiff breaking "$base" "$revision" $flags --format githubactions || true
+# authoritative exit code is from Run 1. --template= overrides a 'template'
+# set in .oasdiff.yaml, which is rejected for the githubactions format and
+# would (via || true) silently suppress the annotations.
+oasdiff breaking "$base" "$revision" $flags --format githubactions --template= || true
 
 # *** GitHub Action step output ***
 
@@ -207,7 +210,7 @@ echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 # The explicit --fail-on overrides a config fail-on for this probe only; Run 1's
 # authoritative gate exit code is untouched.
 changes_exit=0
-oasdiff breaking "$base" "$revision" $flags --fail-on=WARN >/dev/null 2>&1 || changes_exit=$?
+oasdiff breaking "$base" "$revision" $flags --fail-on=WARN --template= >/dev/null 2>&1 || changes_exit=$?
 if [ "$changes_exit" -eq 1 ]; then
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 
@@ -230,8 +233,11 @@ if [ "$changes_exit" -eq 1 ]; then
             # --open prints the review URL on stdout; in CI the browser-open
             # step soft-fails. We grep the /review/e/ URL out by its stable path
             # shape (not by surrounding prose). Tolerate a non-zero exit / no
-            # match so `set -e` doesn't abort the run.
-            free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open 2>/dev/null \
+            # match so `set -e` doesn't abort the run. --template= overrides a
+            # 'template' set in .oasdiff.yaml, which would otherwise error this
+            # render (templates are rejected for the default text format) and
+            # yield no URL.
+            free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open --template= 2>/dev/null \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
                 echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
