@@ -223,11 +223,10 @@ if [ -n "$changes_json" ] && [ "$changes_json" != "[]" ]; then
             # "couldn't upload" warning below.
             echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The changelog above is unaffected."
         else
-            # Reuse the same semantic flags as the diff above so the uploaded
-            # comparison matches. --open prints the review URL on stdout; in CI
-            # the browser-open step soft-fails. We grep the /review/e/ URL out by
-            # its stable path shape (not by surrounding prose). Tolerate a
-            # non-zero exit / no match so `set -e` doesn't abort the run.
+            # --open prints the review URL on stdout; in CI the browser-open
+            # step soft-fails. We grep the /review/e/ URL out by its stable path
+            # shape (not by surrounding prose). Tolerate a non-zero exit / no
+            # match so `set -e` doesn't abort the run.
             free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
