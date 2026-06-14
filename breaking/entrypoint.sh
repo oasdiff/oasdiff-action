@@ -37,8 +37,17 @@ readonly github_token="${17}"
 #     a PR that never had changes stays comment-free).
 post_review_comment () {
     review_url="$1"
-    [ -z "$github_token" ] && return 0
     pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
+    if [ -z "$github_token" ]; then
+        # No token to comment with. If we produced a review link on a PR, nudge
+        # the user to enable the PR comment rather than failing silently (the
+        # link is still in the job summary). This is the default for anyone who
+        # upgraded the action version without adding github-token + permissions.
+        if [ -n "$review_url" ] && [ -n "$pr_number" ]; then
+            echo "::notice::oasdiff put the side-by-side review link in the job summary. To post it as a pull-request comment instead, pass 'github-token: \${{ github.token }}' to the action and grant the job 'permissions: pull-requests: write'. See https://www.oasdiff.com/docs/github-action"
+        fi
+        return 0
+    fi
     [ -z "$pr_number" ] && return 0
     owner="${GITHUB_REPOSITORY%%/*}"
     repo="${GITHUB_REPOSITORY#*/}"
