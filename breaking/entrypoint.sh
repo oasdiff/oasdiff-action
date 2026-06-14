@@ -199,7 +199,16 @@ oasdiff breaking "$base" "$revision" $flags --format githubactions || true
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -q "^No "; then
+# Whether there are breaking changes is read off oasdiff's exit code with
+# --fail-on=WARN (breaking renders WARN-and-above, and WARN is the lowest level
+# it accepts for fail-on): exit 1 means at least one breaking change, 0 means
+# none. This is format-proof; parsing $breaking_changes is not, because its shape
+# follows any 'format' set in .oasdiff.yaml (e.g. json renders "[]", not "No ...").
+# The explicit --fail-on overrides a config fail-on for this probe only; Run 1's
+# authoritative gate exit code is untouched.
+changes_exit=0
+oasdiff breaking "$base" "$revision" $flags --fail-on=WARN >/dev/null 2>&1 || changes_exit=$?
+if [ "$changes_exit" -eq 1 ]; then
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 
     free_review_url=""
