@@ -149,16 +149,22 @@ fi
 if [ "$case_insensitive_headers" = "true" ]; then
     flags="$flags --case-insensitive-headers"
 fi
-if [ -n "$format" ]; then
-    flags="$flags --format $format"
-fi
-if [ -n "$template" ]; then
-    flags="$flags --template $template"
-fi
 if [ -n "$level" ]; then
     flags="$flags --level $level"
 fi
-echo "flags: $flags"
+# format and template are presentation-only. Keep them out of $flags so the
+# json change-probe and the --open upload below run on the semantic flags only:
+# the probe must render as json regardless of the user's format, and --template
+# is rejected for json (it would error both). $fmt_flags is applied only to the
+# user-facing changelog render.
+fmt_flags=""
+if [ -n "$format" ]; then
+    fmt_flags="$fmt_flags --format $format"
+fi
+if [ -n "$template" ]; then
+    fmt_flags="$fmt_flags --template $template"
+fi
+echo "flags: $flags, presentation flags: $fmt_flags"
 
 # *** github action step output ***
 
@@ -172,11 +178,7 @@ echo "changelog<<$delimiter" >>"$GITHUB_OUTPUT"
 
 exit_code=0
 _err=$(mktemp)
-if [ -n "$flags" ]; then
-    output=$(oasdiff changelog "$base" "$revision" $flags 2>"$_err") || exit_code=$?
-else
-    output=$(oasdiff changelog "$base" "$revision" 2>"$_err") || exit_code=$?
-fi
+output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags 2>"$_err") || exit_code=$?
 if [ "$exit_code" -ne 0 ]; then
     [ -s "$_err" ] && cat "$_err" >&2
     # Promote a genuine failure to a Checks-tab annotation. Exit 1 is the
@@ -194,7 +196,15 @@ if [ "$exit_code" -ne 0 ]; then
 fi
 rm -f "$_err"
 
-if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
+# Decide whether there are changes independently of --format. The user-facing
+# $output may be json/yaml ("[]") or markup (a header line then "No changes
+# detected"), none of which the old first-line "^No " test caught, so a
+# non-default format spammed clean PRs with a review link. A json render is
+# unambiguous: an empty changelog is "[]". Probe with the semantic flags only
+# (level included, so detection matches what the user sees). The probe is a
+# local diff identical to the run above, so it fails only when that run would.
+changes_json=$(oasdiff changelog "$base" "$revision" $flags --format json 2>/dev/null | tr -d '[:space:]') || changes_json=""
+if [ -n "$changes_json" ] && [ "$changes_json" != "[]" ]; then
     write_output "$output"
 
     free_review_url=""
@@ -206,25 +216,34 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     # entirely, so no spec ever leaves CI; the changelog output and the inline
     # annotations are unaffected either way.
     if [ "$review" != "false" ]; then
-        # Reuse the same semantic flags as the diff above so the uploaded
-        # comparison matches. --open prints the review URL on stdout; in CI the
-        # browser-open step soft-fails. We grep the /review/e/ URL out by its
-        # stable path shape (not by surrounding prose). Tolerate a non-zero
-        # exit / no match so `set -e` doesn't abort the run.
-        free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
-            | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
-        if [ -n "$free_review_url" ]; then
-            echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-            # Also surface the link on the PR itself (best-effort) so reviewers
-            # don't have to find the job summary.
-            post_review_comment "$free_review_url"
+        if [ "$composed" = "true" ]; then
+            # Composed mode (-c) diffs globs of many files; the side-by-side
+            # review represents exactly two specs, so --open can't build it.
+            # Say so once instead of running --open only to hit the generic
+            # "couldn't upload" warning below.
+            echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The changelog above is unaffected."
         else
-            # review was requested but no link came back: an offline runner,
-            # oasdiff.com unreachable, or an older oasdiff in the base image.
-            # Warn rather than emit a link -- there's no useful local fallback
-            # (if the upload failed because the host is unreachable, a manual
-            # run would fail the same way), and the changelog above still stands.
-            echo "::warning::oasdiff: couldn't upload the side-by-side review (the changelog still ran). Re-run the job, or set 'review: false' to skip the upload."
+            # Reuse the same semantic flags as the diff above so the uploaded
+            # comparison matches. --open prints the review URL on stdout; in CI
+            # the browser-open step soft-fails. We grep the /review/e/ URL out by
+            # its stable path shape (not by surrounding prose). Tolerate a
+            # non-zero exit / no match so `set -e` doesn't abort the run.
+            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
+                | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
+            if [ -n "$free_review_url" ]; then
+                echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+                # Also surface the link on the PR itself (best-effort) so
+                # reviewers don't have to find the job summary.
+                post_review_comment "$free_review_url"
+            else
+                # review was requested but no link came back: an offline runner,
+                # oasdiff.com unreachable, or an older oasdiff in the base image.
+                # Warn rather than emit a link -- there's no useful local
+                # fallback (if the upload failed because the host is unreachable,
+                # a manual run would fail the same way), and the changelog above
+                # still stands.
+                echo "::warning::oasdiff: couldn't upload the side-by-side review (the changelog still ran). Re-run the job, or set 'review: false' to skip the upload."
+            fi
         fi
     fi
 else

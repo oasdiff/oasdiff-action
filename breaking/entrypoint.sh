@@ -211,25 +211,34 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     # entirely, so no spec ever leaves CI; the breaking-change detection and
     # the inline annotations are unaffected either way.
     if [ "$review" != "false" ]; then
-        # Reuse the same semantic flags as the diff above so the uploaded
-        # comparison matches. --open prints the review URL on stdout; in CI the
-        # browser-open step soft-fails. We grep the /review/e/ URL out by its
-        # stable path shape (not by surrounding prose). Tolerate a non-zero
-        # exit / no match so `set -e` doesn't abort the run.
-        free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open 2>/dev/null \
-            | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
-        if [ -n "$free_review_url" ]; then
-            echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-            # Also surface the link on the PR itself (best-effort) so reviewers
-            # don't have to find the job summary.
-            post_review_comment "$free_review_url"
+        if [ "$composed" = "true" ]; then
+            # Composed mode (-c) diffs globs of many files; the side-by-side
+            # review represents exactly two specs, so --open can't build it.
+            # Say so once instead of running --open only to hit the generic
+            # "couldn't upload" warning below.
+            echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The breaking-change report above is unaffected."
         else
-            # review was requested but no link came back: an offline runner,
-            # oasdiff.com unreachable, or an older oasdiff in the base image.
-            # Warn rather than emit a link -- there's no useful local fallback
-            # (if the upload failed because the host is unreachable, a manual
-            # run would fail the same way), and the report above still stands.
-            echo "::warning::oasdiff: couldn't upload the side-by-side review (the breaking-change report still ran). Re-run the job, or set 'review: false' to skip the upload."
+            # Reuse the same semantic flags as the diff above so the uploaded
+            # comparison matches. --open prints the review URL on stdout; in CI
+            # the browser-open step soft-fails. We grep the /review/e/ URL out by
+            # its stable path shape (not by surrounding prose). Tolerate a
+            # non-zero exit / no match so `set -e` doesn't abort the run.
+            free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open 2>/dev/null \
+                | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
+            if [ -n "$free_review_url" ]; then
+                echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+                # Also surface the link on the PR itself (best-effort) so
+                # reviewers don't have to find the job summary.
+                post_review_comment "$free_review_url"
+            else
+                # review was requested but no link came back: an offline runner,
+                # oasdiff.com unreachable, or an older oasdiff in the base image.
+                # Warn rather than emit a link -- there's no useful local
+                # fallback (if the upload failed because the host is unreachable,
+                # a manual run would fail the same way), and the report above
+                # still stands.
+                echo "::warning::oasdiff: couldn't upload the side-by-side review (the breaking-change report still ran). Re-run the job, or set 'review: false' to skip the upload."
+            fi
         fi
     fi
 else
