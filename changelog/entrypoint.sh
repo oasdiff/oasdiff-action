@@ -134,9 +134,10 @@ fi
 if [ -n "$filter_extension" ]; then
     flags="$flags --filter-extension $filter_extension"
 fi
-if [ "$composed" = "true" ]; then
-    flags="$flags -c"
-fi
+# Pin composed to the action input so a 'composed' setting in .oasdiff.yaml can't
+# desync oasdiff's mode from the action's logic (the --open guard and flag
+# building both key off this input). A cmd-line flag overrides config.
+flags="$flags --composed=$composed"
 if [ "$flatten_allof" = "true" ]; then
     flags="$flags --flatten-allof"
 fi
@@ -149,16 +150,22 @@ fi
 if [ "$case_insensitive_headers" = "true" ]; then
     flags="$flags --case-insensitive-headers"
 fi
-if [ -n "$format" ]; then
-    flags="$flags --format $format"
-fi
-if [ -n "$template" ]; then
-    flags="$flags --template $template"
-fi
 if [ -n "$level" ]; then
     flags="$flags --level $level"
 fi
-echo "flags: $flags"
+# format and template are presentation-only. Keep them out of $flags so the
+# changes probe and the --open upload below run on the semantic flags only: the
+# probe doesn't need the user's format, and --open renders the changelog as json
+# internally where --template is rejected (it would error the upload). $fmt_flags
+# is applied only to the user-facing changelog render.
+fmt_flags=""
+if [ -n "$format" ]; then
+    fmt_flags="$fmt_flags --format $format"
+fi
+if [ -n "$template" ]; then
+    fmt_flags="$fmt_flags --template $template"
+fi
+echo "flags: $flags, presentation flags: $fmt_flags"
 
 # *** github action step output ***
 
@@ -172,18 +179,14 @@ echo "changelog<<$delimiter" >>"$GITHUB_OUTPUT"
 
 exit_code=0
 _err=$(mktemp)
-if [ -n "$flags" ]; then
-    output=$(oasdiff changelog "$base" "$revision" $flags 2>"$_err") || exit_code=$?
-else
-    output=$(oasdiff changelog "$base" "$revision" 2>"$_err") || exit_code=$?
-fi
-if [ "$exit_code" -ne 0 ]; then
+output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags 2>"$_err") || exit_code=$?
+# Only codes >=2 are real errors. Exit 1 is a fail-on result (the changelog
+# action has no fail-on input, but .oasdiff.yaml can set one); the changelog
+# action doesn't gate, so don't let it abort the run or suppress the review below.
+if [ "$exit_code" -ge 2 ]; then
     [ -s "$_err" ] && cat "$_err" >&2
-    # Promote a genuine failure to a Checks-tab annotation. Exit 1 is the
-    # intended fail-on result (not an error); only codes >=2 are real errors.
-    if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
-        echo "::error::$(tr '\n' ' ' < "$_err")"
-    fi
+    # Promote a genuine failure to a Checks-tab annotation.
+    [ -s "$_err" ] && echo "::error::$(tr '\n' ' ' < "$_err")"
     # Exit code 123 = oasdiff refused a disallowed external $ref (stable
     # contract, not message text). Surface the action-specific remedy.
     if [ "$exit_code" -eq 123 ]; then
@@ -194,7 +197,18 @@ if [ "$exit_code" -ne 0 ]; then
 fi
 rm -f "$_err"
 
-if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
+# Decide whether there are changes independently of --format. The user-facing
+# $output varies by format (json/yaml render "[]", markup adds a header line), so
+# parsing it is fragile. Instead read oasdiff's exit code with --fail-on=INFO:
+# exit 1 means the changelog has at least one change at or above --level, exit 0
+# means it's empty. --level stays in $flags so detection matches what the user
+# sees; the explicit --fail-on overrides any config fail-on for this probe only,
+# and the rendered run above is untouched. --template= overrides a 'template' set
+# in .oasdiff.yaml, which would otherwise error this probe (templates are rejected
+# for the default text format) and make it a false negative.
+changes_exit=0
+oasdiff changelog "$base" "$revision" $flags --fail-on=INFO --template= >/dev/null 2>&1 || changes_exit=$?
+if [ "$changes_exit" -eq 1 ]; then
     write_output "$output"
 
     free_review_url=""
@@ -206,25 +220,36 @@ if [ -n "$output" ] && ! echo "$output" | head -n 1 | grep -q "^No "; then
     # entirely, so no spec ever leaves CI; the changelog output and the inline
     # annotations are unaffected either way.
     if [ "$review" != "false" ]; then
-        # Reuse the same semantic flags as the diff above so the uploaded
-        # comparison matches. --open prints the review URL on stdout; in CI the
-        # browser-open step soft-fails. We grep the /review/e/ URL out by its
-        # stable path shape (not by surrounding prose). Tolerate a non-zero
-        # exit / no match so `set -e` doesn't abort the run.
-        free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open 2>/dev/null \
-            | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
-        if [ -n "$free_review_url" ]; then
-            echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-            # Also surface the link on the PR itself (best-effort) so reviewers
-            # don't have to find the job summary.
-            post_review_comment "$free_review_url"
+        if [ "$composed" = "true" ]; then
+            # Composed mode (-c) diffs globs of many files; the side-by-side
+            # review represents exactly two specs, so --open can't build it.
+            # Say so once instead of running --open only to hit the generic
+            # "couldn't upload" warning below.
+            echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The changelog above is unaffected."
         else
-            # review was requested but no link came back: an offline runner,
-            # oasdiff.com unreachable, or an older oasdiff in the base image.
-            # Warn rather than emit a link -- there's no useful local fallback
-            # (if the upload failed because the host is unreachable, a manual
-            # run would fail the same way), and the changelog above still stands.
-            echo "::warning::oasdiff: couldn't upload the side-by-side review (the changelog still ran). Re-run the job, or set 'review: false' to skip the upload."
+            # --open prints the review URL on stdout; in CI the browser-open
+            # step soft-fails. We grep the /review/e/ URL out by its stable path
+            # shape (not by surrounding prose). Tolerate a non-zero exit / no
+            # match so `set -e` doesn't abort the run. --template= overrides a
+            # 'template' set in .oasdiff.yaml, which would otherwise error this
+            # render (templates are rejected for the default text format) and
+            # yield no URL.
+            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open --template= 2>/dev/null \
+                | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
+            if [ -n "$free_review_url" ]; then
+                echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+                # Also surface the link on the PR itself (best-effort) so
+                # reviewers don't have to find the job summary.
+                post_review_comment "$free_review_url"
+            else
+                # review was requested but no link came back: an offline runner,
+                # oasdiff.com unreachable, or an older oasdiff in the base image.
+                # Warn rather than emit a link -- there's no useful local
+                # fallback (if the upload failed because the host is unreachable,
+                # a manual run would fail the same way), and the changelog above
+                # still stands.
+                echo "::warning::oasdiff: couldn't upload the side-by-side review (the changelog still ran). Re-run the job, or set 'review: false' to skip the upload."
+            fi
         fi
     fi
 else

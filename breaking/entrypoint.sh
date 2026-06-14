@@ -143,9 +143,10 @@ fi
 if [ -n "$filter_extension" ]; then
     flags="$flags --filter-extension $filter_extension"
 fi
-if [ "$composed" = "true" ]; then
-    flags="$flags -c"
-fi
+# Pin composed to the action input so a 'composed' setting in .oasdiff.yaml can't
+# desync oasdiff's mode from the action's logic (the --open guard and flag
+# building both key off this input). A cmd-line flag overrides config.
+flags="$flags --composed=$composed"
 if [ "$flatten_allof" = "true" ]; then
     flags="$flags --flatten-allof"
 fi
@@ -186,8 +187,10 @@ rm -f "$_err"
 # Run 2: render annotations to stdout via --format githubactions so
 # GitHub parses them onto the PR's "Files changed" tab. Tolerate
 # non-zero exit (could be triggered by oasdiff.yaml fail-on); the
-# authoritative exit code is from Run 1.
-oasdiff breaking "$base" "$revision" $flags --format githubactions || true
+# authoritative exit code is from Run 1. --template= overrides a 'template'
+# set in .oasdiff.yaml, which is rejected for the githubactions format and
+# would (via || true) silently suppress the annotations.
+oasdiff breaking "$base" "$revision" $flags --format githubactions --template= || true
 
 # *** GitHub Action step output ***
 
@@ -199,7 +202,16 @@ oasdiff breaking "$base" "$revision" $flags --format githubactions || true
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -q "^No "; then
+# Whether there are breaking changes is read off oasdiff's exit code with
+# --fail-on=WARN (breaking renders WARN-and-above, and WARN is the lowest level
+# it accepts for fail-on): exit 1 means at least one breaking change, 0 means
+# none. This is format-proof; parsing $breaking_changes is not, because its shape
+# follows any 'format' set in .oasdiff.yaml (e.g. json renders "[]", not "No ...").
+# The explicit --fail-on overrides a config fail-on for this probe only; Run 1's
+# authoritative gate exit code is untouched.
+changes_exit=0
+oasdiff breaking "$base" "$revision" $flags --fail-on=WARN --template= >/dev/null 2>&1 || changes_exit=$?
+if [ "$changes_exit" -eq 1 ]; then
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 
     free_review_url=""
@@ -211,25 +223,36 @@ if [ -n "$breaking_changes" ] && ! echo "$breaking_changes" | head -n 1 | grep -
     # entirely, so no spec ever leaves CI; the breaking-change detection and
     # the inline annotations are unaffected either way.
     if [ "$review" != "false" ]; then
-        # Reuse the same semantic flags as the diff above so the uploaded
-        # comparison matches. --open prints the review URL on stdout; in CI the
-        # browser-open step soft-fails. We grep the /review/e/ URL out by its
-        # stable path shape (not by surrounding prose). Tolerate a non-zero
-        # exit / no match so `set -e` doesn't abort the run.
-        free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open 2>/dev/null \
-            | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
-        if [ -n "$free_review_url" ]; then
-            echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-            # Also surface the link on the PR itself (best-effort) so reviewers
-            # don't have to find the job summary.
-            post_review_comment "$free_review_url"
+        if [ "$composed" = "true" ]; then
+            # Composed mode (-c) diffs globs of many files; the side-by-side
+            # review represents exactly two specs, so --open can't build it.
+            # Say so once instead of running --open only to hit the generic
+            # "couldn't upload" warning below.
+            echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The breaking-change report above is unaffected."
         else
-            # review was requested but no link came back: an offline runner,
-            # oasdiff.com unreachable, or an older oasdiff in the base image.
-            # Warn rather than emit a link -- there's no useful local fallback
-            # (if the upload failed because the host is unreachable, a manual
-            # run would fail the same way), and the report above still stands.
-            echo "::warning::oasdiff: couldn't upload the side-by-side review (the breaking-change report still ran). Re-run the job, or set 'review: false' to skip the upload."
+            # --open prints the review URL on stdout; in CI the browser-open
+            # step soft-fails. We grep the /review/e/ URL out by its stable path
+            # shape (not by surrounding prose). Tolerate a non-zero exit / no
+            # match so `set -e` doesn't abort the run. --template= overrides a
+            # 'template' set in .oasdiff.yaml, which would otherwise error this
+            # render (templates are rejected for the default text format) and
+            # yield no URL.
+            free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open --template= 2>/dev/null \
+                | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
+            if [ -n "$free_review_url" ]; then
+                echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
+                # Also surface the link on the PR itself (best-effort) so
+                # reviewers don't have to find the job summary.
+                post_review_comment "$free_review_url"
+            else
+                # review was requested but no link came back: an offline runner,
+                # oasdiff.com unreachable, or an older oasdiff in the base image.
+                # Warn rather than emit a link -- there's no useful local
+                # fallback (if the upload failed because the host is unreachable,
+                # a manual run would fail the same way), and the report above
+                # still stands.
+                echo "::warning::oasdiff: couldn't upload the side-by-side review (the breaking-change report still ran). Re-run the job, or set 'review: false' to skip the upload."
+            fi
         fi
     fi
 else
