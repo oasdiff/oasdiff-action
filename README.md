@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.1.0
+      - uses: oasdiff/oasdiff-action/breaking@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.1.0
+      - uses: oasdiff/oasdiff-action/breaking@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -120,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0.1.0
+      - uses: oasdiff/oasdiff-action/changelog@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -162,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/diff@v0.1.0
+      - uses: oasdiff/oasdiff-action/diff@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -196,7 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oasdiff/oasdiff-action/validate@v0.1.0
+      - uses: oasdiff/oasdiff-action/validate@v0.1.1
         with:
           spec: 'openapi.yaml'
 ```
@@ -236,7 +236,7 @@ The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions
 **Explicit path**: if your config lives somewhere else, set `OASDIFF_CONFIG` in the workflow `env:` to point at it:
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.1.0
+- uses: oasdiff/oasdiff-action/breaking@v0.1.1
   env:
     OASDIFF_CONFIG: ./config/oasdiff.yaml
   with:
@@ -288,7 +288,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.0
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -336,7 +336,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.0
+      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.1
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -347,7 +347,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.event.repository.default_branch }}
-      - uses: oasdiff/oasdiff-action/verify@v0.1.0
+      - uses: oasdiff/oasdiff-action/verify@v0.1.1
         with:
           base: 'origin/${{ github.event.repository.default_branch }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
