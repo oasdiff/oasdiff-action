@@ -227,14 +227,15 @@ if [ "$changes_exit" -eq 1 ]; then
             # "couldn't upload" warning below.
             echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The changelog above is unaffected."
         else
-            # --open prints the review URL on stdout; in CI the browser-open
-            # step soft-fails. We grep the /review/e/ URL out by its stable path
-            # shape (not by surrounding prose). Tolerate a non-zero exit / no
-            # match so `set -e` doesn't abort the run. --template= overrides a
-            # 'template' set in .oasdiff.yaml, which would otherwise error this
-            # render (templates are rejected for the default text format) and
-            # yield no URL.
-            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open --template= 2>/dev/null \
+            # --open prints the review URL to stderr (oasdiff >= v1.19.1 moved it
+            # off stdout so it can't corrupt piped --format output); in CI the
+            # browser-open step soft-fails. Merge stderr into the pipe (2>&1) and
+            # grep the /review/e/ URL out by its stable path shape (not by
+            # surrounding prose). Tolerate a non-zero exit / no match so `set -e`
+            # doesn't abort the run. --template= overrides a 'template' set in
+            # .oasdiff.yaml, which would otherwise error this render (templates
+            # are rejected for the default text format) and yield no URL.
+            free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open --template= 2>&1 \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
                 echo "### 📋 [View these API changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
