@@ -153,10 +153,10 @@ if [ -n "$level" ]; then
     flags="$flags --level $level"
 fi
 # format and template are presentation-only. Keep them out of $flags so the
-# json change-probe and the --open upload below run on the semantic flags only:
-# the probe must render as json regardless of the user's format, and --template
-# is rejected for json (it would error both). $fmt_flags is applied only to the
-# user-facing changelog render.
+# changes probe and the --open upload below run on the semantic flags only: the
+# probe doesn't need the user's format, and --open renders the changelog as json
+# internally where --template is rejected (it would error the upload). $fmt_flags
+# is applied only to the user-facing changelog render.
 fmt_flags=""
 if [ -n "$format" ]; then
     fmt_flags="$fmt_flags --format $format"
@@ -197,14 +197,15 @@ fi
 rm -f "$_err"
 
 # Decide whether there are changes independently of --format. The user-facing
-# $output may be json/yaml ("[]") or markup (a header line then "No changes
-# detected"), none of which the old first-line "^No " test caught, so a
-# non-default format spammed clean PRs with a review link. A json render is
-# unambiguous: an empty changelog is "[]". Probe with the semantic flags only
-# (level included, so detection matches what the user sees). The probe is a
-# local diff identical to the run above, so it fails only when that run would.
-changes_json=$(oasdiff changelog "$base" "$revision" $flags --format json 2>/dev/null | tr -d '[:space:]') || changes_json=""
-if [ -n "$changes_json" ] && [ "$changes_json" != "[]" ]; then
+# $output varies by format (json/yaml render "[]", markup adds a header line), so
+# parsing it is fragile. Instead read oasdiff's exit code with --fail-on=INFO:
+# exit 1 means the changelog has at least one change at or above --level, exit 0
+# means it's empty. --level stays in $flags so detection matches what the user
+# sees; the explicit --fail-on overrides any config fail-on for this probe only,
+# and the rendered run above is untouched.
+changes_exit=0
+oasdiff changelog "$base" "$revision" $flags --fail-on=INFO >/dev/null 2>&1 || changes_exit=$?
+if [ "$changes_exit" -eq 1 ]; then
     write_output "$output"
 
     free_review_url=""
