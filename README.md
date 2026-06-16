@@ -11,6 +11,7 @@ GitHub Actions for comparing OpenAPI specs and detecting breaking changes, based
 ## Contents
 
 - [Quick start](#quick-start)
+- [Versioning](#versioning)
 - [Free actions](#free-actions)
   - [Check for breaking changes](#check-for-breaking-changes)
   - [Generate a changelog](#generate-a-changelog)
@@ -40,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.1.1
+      - uses: oasdiff/oasdiff-action/breaking@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -49,6 +50,24 @@ jobs:
 ```
 
 This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found. When changes are found it posts a side-by-side review link as a PR comment; drop `github-token` and the `pull-requests: write` permission to keep that link in the job summary instead.
+
+---
+
+## Versioning
+
+The examples above pin the action at `@v0`, the moving major-version tag. It always points at the latest `v0.x.y` release, so you get every later patch and minor (including review and PR-comment improvements) automatically, with no workflow change:
+
+```yaml
+- uses: oasdiff/oasdiff-action/breaking@v0
+```
+
+`@v0` only advances on stable releases, never on prereleases. If you prefer to control upgrades yourself, pin an exact release instead and bump it when you choose:
+
+```yaml
+- uses: oasdiff/oasdiff-action/breaking@v0.1.1
+```
+
+`@main` runs the unreleased tip and is meant for trying changes early, not for production.
 
 ---
 
@@ -74,7 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/breaking@v0.1.1
+      - uses: oasdiff/oasdiff-action/breaking@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -120,7 +139,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0.1.1
+      - uses: oasdiff/oasdiff-action/changelog@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -162,7 +181,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/diff@v0.1.1
+      - uses: oasdiff/oasdiff-action/diff@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -196,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: oasdiff/oasdiff-action/validate@v0.1.1
+      - uses: oasdiff/oasdiff-action/validate@v0
         with:
           spec: 'openapi.yaml'
 ```
@@ -236,7 +255,7 @@ The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions
 **Explicit path**: if your config lives somewhere else, set `OASDIFF_CONFIG` in the workflow `env:` to point at it:
 
 ```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.1.1
+- uses: oasdiff/oasdiff-action/breaking@v0
   env:
     OASDIFF_CONFIG: ./config/oasdiff.yaml
   with:
@@ -288,7 +307,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.1
+      - uses: oasdiff/oasdiff-action/pr-comment@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -336,7 +355,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0.1.1
+      - uses: oasdiff/oasdiff-action/pr-comment@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
@@ -347,7 +366,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: git fetch --depth=1 origin ${{ github.event.repository.default_branch }}
-      - uses: oasdiff/oasdiff-action/verify@v0.1.1
+      - uses: oasdiff/oasdiff-action/verify@v0
         with:
           base: 'origin/${{ github.event.repository.default_branch }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
