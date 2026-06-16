@@ -85,9 +85,11 @@ post_review_comment () {
         body="${marker}
 ### 📋 [View the side-by-side API change review](${review_url})
 
-See exactly what changed, in context. Share this link with your team: anyone can open the review, no install and no account needed. It expires in 7 days.
+The link expires in 7 days.
 
-🔒 Your specs stay private. They're encrypted before upload, and only this link can unlock them. [How it works →](https://www.oasdiff.com/docs/free-review#privacy)"
+🔒 Your API specs are encrypted in CI before they're uploaded. The decryption key stays in this link's URL fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs. [How it works →](https://www.oasdiff.com/docs/free-review#privacy)
+
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/free-review#github-action). To turn this off (no spec upload, no comment), set \`review: false\` on the action.</sub>"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No API changes in the latest revision."
