@@ -70,7 +70,7 @@ The link expires in 7 days.
 
 🔒 Your API specs are encrypted in CI before they're uploaded. The decryption key stays in this link's URL fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs. [How it works →](https://www.oasdiff.com/docs/free-review#privacy)
 
-<sub>Posted automatically by the oasdiff GitHub Action. To stop posting this comment, set \`review: false\` on the action.</sub>"
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/free-review#github-action). To turn this off (no spec upload, no comment), set \`review: false\` on the action.</sub>"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No breaking changes in the latest revision."
