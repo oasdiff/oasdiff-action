@@ -42,6 +42,7 @@ readonly level="${14}"
 readonly allow_external_refs="${15}"
 readonly review="${16}"
 readonly github_token="${17}"
+readonly oasdiff_token="${18}"
 
 # post_review_comment posts (or updates) a single pull-request comment with the
 # free side-by-side review link, so reviewers see it on the PR rather than only
@@ -116,6 +117,166 @@ The link expires in 7 days.
     else
         echo "::notice::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is still in the job summary."
     fi
+}
+
+# pro_review (oasdiff-token set): upload an authenticated review, post/update the
+# Pro PR comment, and set the `oasdiff` commit-status gate. Best-effort and never
+# fatal, like the free review. Needs a pull_request event; the comment and status
+# need a github-token with pull-requests:write + statuses:write. Used instead of
+# the free review when an oasdiff-token is provided (one review per PR).
+pro_review () {
+    pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
+    if [ -z "$pr_number" ]; then
+        echo "::notice::oasdiff: a Pro review needs a pull_request event; skipping (no PR to attach to)."
+        return 0
+    fi
+    owner="${GITHUB_REPOSITORY%%/*}"
+    repo="${GITHUB_REPOSITORY#*/}"
+    head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+    [ -z "$head_sha" ] && head_sha="$GITHUB_SHA"
+
+    # oasdiff encrypts {specs + changelog} with a one-time key, uploads only the
+    # ciphertext to the token-authenticated endpoint, and prints the /review/ep
+    # URL (key in the #fragment) plus "oasdiff: review status: <state>" to stderr.
+    # Tolerate a non-zero exit; --open is additive. --review-meta carries the PR
+    # context as an opaque bag the CLI forwards without interpreting.
+    pro_out=$(oasdiff changelog "$base" "$revision" $flags --open --template= \
+        --review-token "$oasdiff_token" \
+        --review-meta owner="$owner" \
+        --review-meta repo="$repo" \
+        --review-meta pull_number="$pr_number" \
+        --review-meta head_sha="$head_sha" 2>&1) || true
+    review_url=$(printf '%s' "$pro_out" | grep -oE 'https://[^[:space:]]+/review/ep/[^[:space:]]+' | head -n 1) || true
+    gate=$(printf '%s' "$pro_out" | sed -n 's/^oasdiff: review status: \([a-z][a-z]*\).*/\1/p' | head -n 1) || true
+    # A lapsed trial/subscription returns HTTP 402 with a subscription_expired
+    # body, which the CLI surfaces as "upload failed (HTTP 402): ...". Show a
+    # clear renewal message instead of the generic "verify the oasdiff-token"
+    # warning below, and don't fail the job.
+    if printf '%s' "$pro_out" | grep -q 'subscription_expired'; then
+        echo "::warning title=oasdiff trial or subscription expired::Your oasdiff plan has expired, so no Pro review was posted. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro."
+        {
+            echo "### ⚠️ oasdiff trial or subscription expired"
+            echo ""
+            echo "Your oasdiff trial or subscription has expired, so no Pro review was posted for this pull request."
+            echo ""
+            echo "**To resume oasdiff Pro:** [renew your plan](https://www.oasdiff.com/pricing)."
+        } >> "$GITHUB_STEP_SUMMARY"
+        return 0
+    fi
+    if [ -z "$review_url" ]; then
+        echo "::warning::oasdiff: couldn't upload the Pro review (the changelog still ran). Re-run the job, or verify the oasdiff-token."
+        return 0
+    fi
+
+    echo "### 📋 [Review and approve the API changes](${review_url})" >> "$GITHUB_STEP_SUMMARY"
+    pro_comment "$review_url" "$gate"
+    set_commit_status "$owner" "$repo" "$head_sha" "$gate" "$review_url"
+}
+
+# pro_comment posts or updates the Pro review comment (marker oasdiff-pro-review).
+pro_comment () {
+    review_url="$1"
+    gate="$2"
+    if [ -z "$github_token" ]; then
+        echo "::notice::oasdiff: review uploaded; add 'github-token: \${{ github.token }}' and grant 'permissions: pull-requests: write, statuses: write' to post the review comment and set the merge gate. The link is in the job summary."
+        return 0
+    fi
+    api="${GITHUB_API_URL:-https://api.github.com}"
+    marker="<!-- oasdiff-pro-review -->"
+    case "$gate" in
+        approved) status_line="✅ All changes approved." ;;
+        rejected) status_line="❌ Changes requested." ;;
+        *)        status_line="⏳ Review required: approve every change to clear the \`oasdiff\` merge gate." ;;
+    esac
+
+    existing_id=$(curl -s \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "${api}/repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100" 2>/dev/null \
+        | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
+
+    body="${marker}
+### 📋 [Review and approve the API changes](${review_url})
+
+${status_line}
+
+🔒 The comparison is encrypted in CI before it's uploaded. The decryption key stays in this link's fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs.
+
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/setup). The \`oasdiff\` status check gates merge until every change is approved.</sub>"
+
+    payload=$(jq -n --arg body "$body" '{body: $body}')
+    if [ -n "$existing_id" ]; then
+        endpoint="${api}/repos/${owner}/${repo}/issues/comments/${existing_id}"
+        method="PATCH"
+    else
+        endpoint="${api}/repos/${owner}/${repo}/issues/${pr_number}/comments"
+        method="POST"
+    fi
+    code=$(printf '%s' "$payload" | curl -s -o /dev/null -w "%{http_code}" -X "$method" \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "$endpoint" --data-binary @- 2>/dev/null) || code="000"
+    if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+        echo "oasdiff: posted the Pro review comment."
+    else
+        echo "::notice::oasdiff: couldn't post the Pro review comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is in the job summary."
+    fi
+}
+
+# set_commit_status sets the `oasdiff` commit-status gate from the review state.
+set_commit_status () {
+    s_owner="$1"
+    s_repo="$2"
+    s_sha="$3"
+    s_gate="$4"
+    s_target="$5"
+    [ -z "$github_token" ] && return 0
+    [ -z "$s_sha" ] && return 0
+    api="${GITHUB_API_URL:-https://api.github.com}"
+    case "$s_gate" in
+        approved) state="success"; desc="All API changes approved" ;;
+        rejected) state="failure"; desc="API changes were rejected" ;;
+        *)        state="pending"; desc="API changes need review" ;;
+    esac
+    payload=$(jq -n --arg s "$state" --arg c "oasdiff" --arg d "$desc" --arg u "$s_target" \
+        '{state: $s, context: $c, description: $d} + (if $u == "" then {} else {target_url: $u} end)')
+    code=$(printf '%s' "$payload" | curl -s -o /dev/null -w "%{http_code}" -X POST \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "${api}/repos/${s_owner}/${s_repo}/statuses/${s_sha}" --data-binary @- 2>/dev/null) || code="000"
+    if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+        echo "oasdiff: set the 'oasdiff' commit status to '$state'."
+    else
+        echo "::notice::oasdiff: couldn't set the commit status (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: statuses: write'."
+    fi
+}
+
+# pro_review_clear handles the no-changes case: clear the gate (success) and, if a
+# Pro comment already exists, update it to "no changes". Never creates a comment.
+pro_review_clear () {
+    pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
+    [ -z "$pr_number" ] && return 0
+    owner="${GITHUB_REPOSITORY%%/*}"
+    repo="${GITHUB_REPOSITORY#*/}"
+    head_sha=$(jq -r '.pull_request.head.sha // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+    [ -z "$head_sha" ] && head_sha="$GITHUB_SHA"
+    set_commit_status "$owner" "$repo" "$head_sha" "approved" ""
+    [ -z "$github_token" ] && return 0
+    api="${GITHUB_API_URL:-https://api.github.com}"
+    marker="<!-- oasdiff-pro-review -->"
+    existing_id=$(curl -s \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "${api}/repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100" 2>/dev/null \
+        | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
+    [ -z "$existing_id" ] && return 0
+    body="${marker}
+### ✅ No API changes in the latest revision."
+    payload=$(jq -n --arg body "$body" '{body: $body}')
+    printf '%s' "$payload" | curl -s -o /dev/null -X PATCH \
+        -H "Authorization: token $github_token" \
+        -H "Accept: application/vnd.github+json" \
+        "${api}/repos/${owner}/${repo}/issues/comments/${existing_id}" --data-binary @- 2>/dev/null || true
 }
 
 echo "running oasdiff changelog base: $base, revision: $revision, include_path_params: $include_path_params, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, output_to_file: $output_to_file, prefix_base: $prefix_base, prefix_revision: $prefix_revision, case_insensitive_headers: $case_insensitive_headers, format: $format, template: $template, level: $level"
@@ -214,6 +375,15 @@ if [ "$changes_exit" -eq 1 ]; then
     write_output "$output"
 
     free_review_url=""
+    if [ -n "$oasdiff_token" ]; then
+        # Pro mode: an authenticated review with an approval gate, posted instead
+        # of the free anonymous review (one review per PR). composed mode can't
+        # build a two-spec side-by-side, same as the free path.
+        if [ "$composed" = "true" ]; then
+            echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The changelog above is unaffected."
+        else
+            pro_review
+        fi
     # review (default true): upload the comparison to oasdiff.com and link
     # straight to the rendered side-by-side review. The upload is
     # zero-knowledge -- the oasdiff binary encrypts the two specs client-side
@@ -221,7 +391,7 @@ if [ "$changes_exit" -eq 1 ]; then
     # stores a blob it cannot read. Set review: false to skip the upload
     # entirely, so no spec ever leaves CI; the changelog output and the inline
     # annotations are unaffected either way.
-    if [ "$review" != "false" ]; then
+    elif [ "$review" != "false" ]; then
         if [ "$composed" = "true" ]; then
             # Composed mode (-c) diffs globs of many files; the side-by-side
             # review represents exactly two specs, so --open can't build it.
@@ -259,7 +429,9 @@ else
     write_output "No changelog changes"
     # Keep an existing review comment honest when a later push removes all
     # changes; never create one for an always-clean PR.
-    if [ "$review" != "false" ]; then
+    if [ -n "$oasdiff_token" ]; then
+        pro_review_clear
+    elif [ "$review" != "false" ]; then
         post_review_comment ""
     fi
 fi
@@ -268,7 +440,7 @@ echo "$delimiter" >>"$GITHUB_OUTPUT"
 # review_url is a single-line output, written after the multiline `changelog`
 # block is closed so it doesn't get folded into that value. Empty when there
 # are no changes (the notice/URL only fire then).
-echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
+echo "review_url=${free_review_url:-${review_url:-}}" >> "$GITHUB_OUTPUT"
 
 # *** github action step output ***
 
