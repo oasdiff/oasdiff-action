@@ -336,3 +336,73 @@ jobs:
             exit 1
           fi
           echo "PASS"
+
+  pr_comment_expired_trial_warns_without_failing:
+    runs-on: ubuntu-latest
+    name: Test pr-comment surfaces an expired-trial 402 as a warning without failing
+    # When the tenant.Validate middleware returns 402 subscription_expired (the
+    # tenant's trial or subscription has lapsed), the action should surface a
+    # graceful "trial expired" warning + step summary with the renewal link but
+    # NOT fail the workflow (exit 0). Guards against regressing to the generic
+    # non-2xx branch, which dumps raw JSON and exits 1 with an opaque error.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff + curl (402 subscription_expired), run entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          printf '[{"id":"c1","text":"removed endpoint","level":3}]'
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # Stub curl: ignore the POST body, emit the 402 subscription_expired
+          # response (body, newline, status code) the middleware returns.
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          cat >/dev/null
+          printf '{"code":"subscription_expired","message":"Your oasdiff trial or subscription has expired. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro.","upgrade_url":"https://www.oasdiff.com/pricing"}\n402\n'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=acme/widgets
+          export GITHUB_SHA=deadbeef
+          export GITHUB_BASE_REF=main
+          export GITHUB_STEP_SUMMARY=/tmp/run/step-summary
+          : > "$GITHUB_STEP_SUMMARY"
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./pr-comment/entrypoint.sh \
+            'specs/base.yaml' 'specs/revision.yaml' \
+            '' '' '' 'stub-oasdiff-token' '' '' 2>&1)
+          rc=$?
+          set -e
+          echo "--- entrypoint output ---"; echo "$out"
+          echo "--- exit code: $rc ---"
+          echo "--- step summary ---"; cat "$GITHUB_STEP_SUMMARY"
+
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: expected exit 0 (warn-don't-fail), got $rc" >&2
+            exit 1
+          fi
+          if ! echo "$out" | grep -q "::warning title=oasdiff trial or subscription expired::"; then
+            echo "FAIL: missing expired-trial warning annotation" >&2
+            exit 1
+          fi
+          if ! grep -q "oasdiff trial or subscription expired" "$GITHUB_STEP_SUMMARY"; then
+            echo "FAIL: expired-trial step summary not written" >&2
+            exit 1
+          fi
+          if echo "$out" | grep -q "oasdiff-service returned HTTP"; then
+            echo "FAIL: fell through to the generic non-2xx branch" >&2
+            exit 1
+          fi
+          echo "PASS"
