@@ -148,6 +148,21 @@ pro_review () {
         --review-meta head_sha="$head_sha" 2>&1) || true
     review_url=$(printf '%s' "$pro_out" | grep -oE 'https://[^[:space:]]+/review/ep/[^[:space:]]+' | head -n 1) || true
     gate=$(printf '%s' "$pro_out" | sed -n 's/^oasdiff: review status: \([a-z][a-z]*\).*/\1/p' | head -n 1) || true
+    # A lapsed trial/subscription returns HTTP 402 with a subscription_expired
+    # body, which the CLI surfaces as "upload failed (HTTP 402): ...". Show a
+    # clear renewal message instead of the generic "verify the oasdiff-token"
+    # warning below, and don't fail the job.
+    if printf '%s' "$pro_out" | grep -q 'subscription_expired'; then
+        echo "::warning title=oasdiff trial or subscription expired::Your oasdiff plan has expired, so no Pro review was posted. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro."
+        {
+            echo "### ⚠️ oasdiff trial or subscription expired"
+            echo ""
+            echo "Your oasdiff trial or subscription has expired, so no Pro review was posted for this pull request."
+            echo ""
+            echo "**To resume oasdiff Pro:** [renew your plan](https://www.oasdiff.com/pricing)."
+        } >> "$GITHUB_STEP_SUMMARY"
+        return 0
+    fi
     if [ -z "$review_url" ]; then
         echo "::warning::oasdiff: couldn't upload the Pro review (the changelog still ran). Re-run the job, or verify the oasdiff-token."
         return 0
