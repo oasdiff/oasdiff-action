@@ -57,7 +57,7 @@ inputs:
     required: false
     default: 'false'
   review:
-    description: 'Upload the comparison to oasdiff.com (encrypted, zero-knowledge) and link straight to a side-by-side review of these changes. The specs are encrypted client-side and the key stays in the URL fragment, so the server cannot read them. Set to false to skip the upload entirely, so no spec leaves CI; the change detection and inline annotations are unaffected.'
+    description: 'Upload the comparison to oasdiff.com and link straight to a side-by-side review of these changes. The specs are encrypted client-side and the key stays in the URL fragment, so the server cannot read them. Set to false to skip the upload entirely, so no spec leaves CI; the change detection and inline annotations are unaffected.'
     required: false
     default: 'true'
   github-token:
