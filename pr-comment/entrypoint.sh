@@ -188,6 +188,21 @@ elif [ "$http_code" = "402" ] && [ "$(echo "$body" | jq -r '.code // empty' 2>/d
         echo "_Repositories already counted toward your plan are unaffected._"
     } >> "$GITHUB_STEP_SUMMARY"
     exit 0
+elif [ "$http_code" = "402" ] && [ "$(echo "$body" | jq -r '.code // empty' 2>/dev/null)" = "subscription_expired" ]; then
+    # The service returns 402 + this code when the tenant's trial or
+    # subscription has lapsed. Surface a clear, non-failing message (exit 0)
+    # so an expired plan informs the team rather than breaking the merge gate
+    # with an opaque error, matching the repo_limit_reached treatment above.
+    upgrade_url=$(echo "$body" | jq -r '.upgrade_url // "https://www.oasdiff.com/pricing"')
+    echo "::warning title=oasdiff trial or subscription expired::Your oasdiff plan has expired, so no review comment was posted. Renew at ${upgrade_url} to continue using oasdiff Pro."
+    {
+        echo "### ⚠️ oasdiff trial or subscription expired"
+        echo ""
+        echo "Your oasdiff trial or subscription has expired, so no review comment was posted for this pull request."
+        echo ""
+        echo "**To resume oasdiff Pro:** [renew your plan](${upgrade_url})."
+    } >> "$GITHUB_STEP_SUMMARY"
+    exit 0
 else
     echo "ERROR: oasdiff-service returned HTTP $http_code" >&2
     echo "$body" >&2
