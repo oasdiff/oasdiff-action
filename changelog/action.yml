@@ -67,6 +67,10 @@ inputs:
     description: 'GitHub token used to post the review link as a pull-request comment, so reviewers see it on the PR instead of only in the job summary. Defaults to the built-in github.token, so the comment is posted automatically when the job grants permissions: pull-requests: write. Set to an empty string to disable the comment (the link then appears only in the job summary). On fork pull requests the token is read-only, so commenting is skipped and the link falls back to the job summary.'
     required: false
     default: ${{ github.token }}
+  oasdiff-token:
+    description: 'oasdiff Pro tenant token (the OASDIFF_TOKEN secret). When set, the action uploads an authenticated review and posts a review comment + an `oasdiff` commit status gate. Requires `permissions: pull-requests: write` and `statuses: write`.'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'
@@ -93,4 +97,5 @@ runs:
     - ${{ inputs.allow-external-refs }}
     - ${{ inputs.review }}
     - ${{ inputs.github-token }}
+    - ${{ inputs.oasdiff-token }}
 
