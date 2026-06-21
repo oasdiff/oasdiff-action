@@ -155,3 +155,74 @@ jobs:
             exit 1
           fi
           echo "PASS"
+  changelog_pro_happy_path_posts_comment_and_status:
+    runs-on: ubuntu-latest
+    name: Test changelog Pro path posts the review comment and sets the gate
+    # Companion to changelog_pro_expired_trial_warns_without_failing: the success
+    # path. Stubs oasdiff (changes present; --open prints a /review/ep URL +
+    # "review status: pending") and curl (GitHub API: empty comment list, then
+    # 2xx for the comment + status POSTs). Asserts the Pro review comment is
+    # posted, the oasdiff commit status is set, and the review URL reaches the
+    # step summary. Guards the core Pro funnel action behavior in CI without the
+    # full prod e2e.
+    steps:
+      - uses: actions/checkout@v6
+      - name: Stub oasdiff + curl (Pro success), run entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do [ "$a" = "--fail-on=INFO" ] && exit 1; done
+          for a in "$@"; do
+            if [ "$a" = "--open" ]; then
+              echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
+              echo "oasdiff: review status: pending" >&2
+              exit 0
+            fi
+          done
+          echo "1 changes: 1 error, 0 warning, 0 info"
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # The POST calls carry -w %{http_code}; return a 2xx. The comment-list
+          # GET has no such flag; return an empty JSON array so jq finds no
+          # existing comment and the entrypoint POSTs a new one.
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do case "$a" in *"%{http_code}"*) echo "201"; exit 0 ;; esac; done
+          echo "[]"
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=acme/widgets
+          export GITHUB_SHA=deadbeef
+          export GITHUB_OUTPUT=/tmp/run/out; : > "$GITHUB_OUTPUT"
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary; : > "$GITHUB_STEP_SUMMARY"
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+
+          export PATH=/tmp/stub:$PATH
+          set +e
+          out=$(./changelog/entrypoint.sh \
+            'b' 'r' '' '' '' '' '' '' '' '' '' '' '' '' '' '' 'gh-token' 'oasdiff-token' 2>&1)
+          rc=$?
+          set -e
+          echo "--- output ---"; echo "$out"
+          echo "--- step summary ---"; cat "$GITHUB_STEP_SUMMARY"
+
+          if [ "$rc" -ne 0 ]; then echo "FAIL: expected exit 0, got $rc" >&2; exit 1; fi
+          if ! echo "$out" | grep -q "oasdiff: posted the Pro review comment."; then
+            echo "FAIL: Pro review comment not posted" >&2; exit 1
+          fi
+          if ! echo "$out" | grep -q "set the 'oasdiff' commit status to 'pending'"; then
+            echo "FAIL: commit status not set" >&2; exit 1
+          fi
+          if ! grep -q 'review/ep/test-token-uuid' "$GITHUB_STEP_SUMMARY"; then
+            echo "FAIL: review URL not in step summary" >&2; exit 1
+          fi
+          echo "PASS"
