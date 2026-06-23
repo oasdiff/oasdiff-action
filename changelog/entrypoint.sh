@@ -178,7 +178,7 @@ pro_comment () {
     review_url="$1"
     gate="$2"
     if [ -z "$github_token" ]; then
-        echo "::notice::oasdiff: review uploaded; add 'github-token: \${{ github.token }}' and grant 'permissions: pull-requests: write, statuses: write' to post the review comment and set the merge gate. The link is in the job summary."
+        echo "::notice::oasdiff: review uploaded; add 'github-token: \${{ github.token }}' and grant 'permissions: pull-requests: write, statuses: write' to post the review comment and set the \`oasdiff\` status check. The link is in the job summary."
         return 0
     fi
     api="${GITHUB_API_URL:-https://api.github.com}"
@@ -186,7 +186,7 @@ pro_comment () {
     case "$gate" in
         approved) status_line="✅ All changes approved." ;;
         rejected) status_line="❌ Changes requested." ;;
-        *)        status_line="⏳ Review required: approve every change to clear the \`oasdiff\` merge gate." ;;
+        *)        status_line="⏳ Review required: approve every change to make the \`oasdiff\` status check pass." ;;
     esac
 
     existing_id=$(curl -s \
@@ -202,7 +202,7 @@ ${status_line}
 
 🔒 The comparison is encrypted in CI before it's uploaded. The decryption key stays in this link's fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs.
 
-<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/setup). The \`oasdiff\` status check gates merge until every change is approved.</sub>"
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/setup). The \`oasdiff\` status check passes once every change is approved; make it a required check to block merging.</sub>"
 
     payload=$(jq -n --arg body "$body" '{body: $body}')
     if [ -n "$existing_id" ]; then
