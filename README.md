@@ -6,7 +6,7 @@
 [![validate](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-validate.yaml)
 [![verify](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-verify.yaml/badge.svg)](https://github.com/oasdiff/oasdiff-action/actions/workflows/test-verify.yaml)
 
-GitHub Actions that turn every pull request into an API change review: detect breaking changes in CI, post a side-by-side review, and (with Pro) approve or reject each change with a merge gate. Code review, for your API contract. Based on [oasdiff](https://github.com/oasdiff/oasdiff).
+GitHub Actions that check your OpenAPI specs for breaking changes on every pull request. They post a side-by-side review of the changes as a PR comment and, with Pro, let your team approve or reject each change with a commit-status check that gates the merge. Based on [oasdiff](https://github.com/oasdiff/oasdiff).
 
 ## Contents
 
