@@ -55,7 +55,7 @@ This compares your spec on the PR branch against the base branch and fails the w
 
 ## Versioning
 
-The examples above pin the action at `@v0`, the moving major-version tag. It always points at the latest `v0.x.y` release, so you get every later patch and minor (including review and PR-comment improvements) automatically, with no workflow change:
+The examples here pin the action at `@v0`, the moving major-version tag. It always points at the latest `v0.x.y` release, so you get every later patch and minor (including review and PR-comment improvements) automatically, with no workflow change:
 
 ```yaml
 - uses: oasdiff/oasdiff-action/breaking@v0
