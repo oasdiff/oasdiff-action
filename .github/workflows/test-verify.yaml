@@ -10,7 +10,7 @@ jobs:
     # Stub oasdiff (specs resolve) + curl (service returns all checks true) and
     # assert the entrypoint renders a full-green checklist and exits 0.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Stub oasdiff + curl, run verify entrypoint
         run: |
           set -euo pipefail
@@ -54,7 +54,7 @@ jobs:
     # Service reports app_installed=false: the entrypoint must mark that check
     # red, emit an annotation, and exit 1 (setup not complete).
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Stub oasdiff + curl (app not installed)
         run: |
           set -euo pipefail
@@ -98,7 +98,7 @@ jobs:
     # false). Verify must report that distinctly from "spec not found" — with
     # the allow-external-refs hint, not a path hint — and exit 1.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Stub oasdiff (exit 123) + curl
         run: |
           set -euo pipefail

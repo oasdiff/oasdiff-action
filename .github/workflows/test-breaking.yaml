@@ -10,7 +10,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running breaking action
         id: test_breaking_changes
         uses: ./breaking
@@ -47,7 +47,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "2 changes: 0 error, 2 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running breaking action
         id: test_breaking_changes
         uses: ./breaking
@@ -85,7 +85,7 @@ jobs:
         OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "9 changes: 6 error, 3 warning, 0 info"
       steps:
         - name: checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - name: Running breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
           id: test_breaking_changes_matching_delimiter_not_found
           uses: ./breaking
@@ -110,7 +110,7 @@ jobs:
         OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
         - name: checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - name: Running breaking action with composed option
           id: test_breaking_composed
           uses: ./breaking
@@ -134,7 +134,7 @@ jobs:
     name: Test breaking changes with deprecation
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set date for deprecated specs
         run: |
           # Deprecate Beta in 14 days
@@ -156,7 +156,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running breaking action with flatten-allof option
         id: test_breaking_flatten_allof
         uses: ./breaking
@@ -180,7 +180,7 @@ jobs:
     name: Test breaking action with err-ignore option
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running breaking action with err-ignore option
         id: test_breaking_err_ignore
         uses: ./breaking
@@ -212,7 +212,7 @@ jobs:
     name: Test breaking action picks up fail-on from .oasdiff.yaml
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Drop .oasdiff.yaml at repo root
         run: |
           cat > .oasdiff.yaml <<EOF
@@ -249,7 +249,7 @@ jobs:
     name: Test breaking action picks up err-ignore from .oasdiff.yaml
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Drop .oasdiff.yaml at repo root
         run: |
           cat > .oasdiff.yaml <<EOF

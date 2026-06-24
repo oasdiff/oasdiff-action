@@ -8,7 +8,7 @@ jobs:
     name: Entrypoints surface genuine errors as annotations, not success/fail-on
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Exercise every entrypoint with a stubbed oasdiff
         run: |
           set -eu

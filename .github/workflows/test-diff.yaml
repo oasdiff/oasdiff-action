@@ -8,7 +8,7 @@ jobs:
     name: Test diff action
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running diff action
         id: test_ete
         uses: ./diff
@@ -28,7 +28,7 @@ jobs:
     name: Test diff action with exclude-elements option
     steps:
         - name: checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - name: Running diff action with exclude-elements option
           id: test_exclude_elements
           uses: ./diff
@@ -53,7 +53,7 @@ jobs:
     name: Test diff action with composed option
     steps:
         - name: checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - name: Running diff action with composed option
           id: test_composed
           uses: ./diff
@@ -78,7 +78,7 @@ jobs:
     name: Test diff action picks up exclude-elements from .oasdiff.yaml
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Drop .oasdiff.yaml at repo root
         run: |
           cat > .oasdiff.yaml <<EOF
