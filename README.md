@@ -19,8 +19,7 @@ GitHub Actions that check your OpenAPI specs for breaking changes on every pull 
   - [Validate a single spec](#validate-a-single-spec)
 - [Configuring with `.oasdiff.yaml`](#configuring-with-oasdiffyaml)
 - [Spec paths](#spec-paths)
-- [Pro: Rich PR comment](#pro-rich-pr-comment)
-- [Pro: Verify your setup](#pro-verify-your-setup)
+- [Pro: Approve and gate changes](#pro-approve-and-gate-changes)
 
 ## Quick start
 
@@ -284,101 +283,44 @@ When using git refs, you need to check out the repo and fetch the base branch:
 
 ---
 
-## Pro: Rich PR comment
+## Pro: Approve and gate changes
 
-`oasdiff/oasdiff-action/pr-comment` posts a single auto-updating comment on every PR that touches your API spec.
+oasdiff Pro adds a sign-off step to the review, so a breaking change can't merge until your team approves it. It's the **same `changelog` action** as above, with your `oasdiff-token` added.
 
-**Getting started:** [Sign up for oasdiff Pro](https://www.oasdiff.com/pricing) to get your token, then follow the setup instructions to install the GitHub App, add your repo secret, and create the workflow.
+On every pull request, oasdiff posts the encrypted side-by-side review and gives each change **Approve / Reject** buttons. A commit status check named `oasdiff` blocks the merge until every breaking change is approved. Approvals are tied to the change fingerprint and carry forward across commits, with a record of who approved what and when.
+
+[Start a free trial](https://www.oasdiff.com/start-trial) (no credit card) to get your token, then add it as an `OASDIFF_TOKEN` repository secret.
 
 ```yaml
 name: oasdiff
 on:
   pull_request:
     branches: [ "main" ]
+permissions:
+  pull-requests: write   # post the review comment
+  statuses: write        # set the merge-gate commit status
 jobs:
-  pr-comment:
+  review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0
+      - uses: oasdiff/oasdiff-action/changelog@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
+          github-token: ${{ github.token }}
 ```
 
-The comment shows a table of all changes, grouped by severity, with a **Review** link for each breaking change:
+The only difference from the free [changelog workflow](#generate-a-changelog) is the `oasdiff-token` secret and the `statuses: write` permission. Your specs are still encrypted in CI before upload, so the server can't read them.
 
-| Severity | Change | Path | Review |
-|---|---|---|---|
-| 🔴 | request parameter became required | `GET /products` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=a570278809fa) |
-| 🔴 | api removed without deprecation | `DELETE /users/{userId}` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=bc9f61316c57) |
-| 🔴 | request parameter type changed | `GET /users/{userId}` | ⏳ [Review](https://www.oasdiff.com/review/4a9fd2d5-5ac2-42f5-94cb-c911d6d41680?highlight=b9a23e767b29) |
-
-Each **Review** link opens a hosted page with a side-by-side spec diff and **Approve / Reject** buttons. Approvals are tied to the change fingerprint and carry forward automatically when the branch is updated. A commit status check blocks the merge until every breaking change has been reviewed.
+This is the `changelog` action [documented above](#generate-a-changelog); the one added input is:
 
 | Input | Default | Description | Accepted values |
 |---|---|---|---|
-| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
-| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `oasdiff-token` | — (required) | oasdiff API token — [sign up at oasdiff.com](https://www.oasdiff.com/pricing) | — |
-| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
-| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
-| `composed` | `false` | Run in composed mode | `true`, `false` |
-| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
+| `oasdiff-token` | `''` | Your oasdiff Pro token (the `OASDIFF_TOKEN` secret). When set, the action uploads an authenticated review, posts the approve/reject comment, and sets the `oasdiff` commit status check that gates the merge. Requires `pull-requests: write` and `statuses: write` | — |
+
+**Optional:** install the [oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new) for an instant gate (the status updates the moment a change is approved, instead of on the next CI run) and for reviews on pull requests from forks. The workflow above already posts the review and sets the gate without it.
 
 [Get oasdiff Pro →](https://www.oasdiff.com/pricing)
-
-## Pro: Verify your setup
-
-`oasdiff/oasdiff-action/verify` is a read-only check that confirms your setup works end to end. It posts no PR comment and sets no commit status. Run it on demand from the **Actions** tab (the "Run workflow" button).
-
-Add it to the same workflow as `pr-comment`, guarded by event type, so one file handles both: `pr-comment` on pull requests, and `verify` when you click "Run workflow".
-
-```yaml
-name: oasdiff
-on:
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
-jobs:
-  pr-comment:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/pr-comment@v0
-        with:
-          base: 'origin/${{ github.base_ref }}:openapi.yaml'
-          revision: 'HEAD:openapi.yaml'
-          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
-  verify:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: git fetch --depth=1 origin ${{ github.event.repository.default_branch }}
-      - uses: oasdiff/oasdiff-action/verify@v0
-        with:
-          base: 'origin/${{ github.event.repository.default_branch }}:openapi.yaml'
-          revision: 'HEAD:openapi.yaml'
-          oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
-```
-
-The verify run renders a checklist in the workflow **Step Summary**:
-
-- ✅ GitHub Actions workflow is running
-- ✅ Connected to oasdiff (your `OASDIFF_TOKEN` secret)
-- ✅ oasdiff GitHub App installed on the repo
-- ✅ OpenAPI spec found and compared
-
-It exits non-zero with a one-line hint for any check that fails, so a verify run is a clear pass/fail. (Reviewer access is checked separately on your setup page.)
-
-| Input | Default | Description | Accepted values |
-|---|---|---|---|
-| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
-| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `oasdiff-token` | — (required) | oasdiff API token, [sign up at oasdiff.com](https://www.oasdiff.com/pricing) | — |
-| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false`; set `true` if your spec references external URLs | `true`, `false` |
