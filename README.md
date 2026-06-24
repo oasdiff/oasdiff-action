@@ -39,7 +39,7 @@ jobs:
   breaking-changes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/breaking@v0
         with:
@@ -55,19 +55,13 @@ This compares your spec on the PR branch against the base branch and fails the w
 
 ## Versioning
 
-The examples above pin the action at `@v0`, the moving major-version tag. It always points at the latest `v0.x.y` release, so you get every later patch and minor (including review and PR-comment improvements) automatically, with no workflow change:
+The examples here pin the action at `@v0`, the moving major-version tag. It always points at the latest `v0.x.y` release, so you get every later patch and minor (including review and PR-comment improvements) automatically, with no workflow change:
 
 ```yaml
 - uses: oasdiff/oasdiff-action/breaking@v0
 ```
 
-`@v0` only advances on stable releases, never on prereleases. If you prefer to control upgrades yourself, pin an exact release instead and bump it when you choose:
-
-```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.1.1
-```
-
-`@main` runs the unreleased tip and is meant for trying changes early, not for production.
+`@v0` only advances on stable releases, never on prereleases. If you prefer to control upgrades yourself, pin to a specific release tag from the [Releases page](https://github.com/oasdiff/oasdiff-action/releases) and bump it when you choose. `@main` runs the unreleased tip and is meant for trying changes early, not for production.
 
 ---
 
@@ -91,7 +85,7 @@ jobs:
   breaking-changes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/breaking@v0
         with:
@@ -137,7 +131,7 @@ jobs:
   changelog:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/changelog@v0
         with:
@@ -179,7 +173,7 @@ jobs:
   diff:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/diff@v0
         with:
@@ -214,7 +208,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: oasdiff/oasdiff-action/validate@v0
         with:
           spec: 'openapi.yaml'
@@ -282,7 +276,7 @@ The `base` and `revision` inputs accept:
 When using git refs, you need to check out the repo and fetch the base branch:
 
 ```yaml
-- uses: actions/checkout@v6
+- uses: actions/checkout@v7
 - run: git fetch --depth=1 origin ${{ github.base_ref }}
 ```
 
@@ -305,7 +299,7 @@ jobs:
   pr-comment:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/pr-comment@v0
         with:
@@ -353,7 +347,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/pr-comment@v0
         with:
@@ -364,7 +358,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.event.repository.default_branch }}
       - uses: oasdiff/oasdiff-action/verify@v0
         with:
