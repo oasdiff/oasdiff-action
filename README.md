@@ -61,13 +61,7 @@ The examples above pin the action at `@v0`, the moving major-version tag. It alw
 - uses: oasdiff/oasdiff-action/breaking@v0
 ```
 
-`@v0` only advances on stable releases, never on prereleases. If you prefer to control upgrades yourself, pin an exact release instead and bump it when you choose:
-
-```yaml
-- uses: oasdiff/oasdiff-action/breaking@v0.1.3
-```
-
-`@main` runs the unreleased tip and is meant for trying changes early, not for production.
+`@v0` only advances on stable releases, never on prereleases. If you prefer to control upgrades yourself, pin to a specific release tag from the [Releases page](https://github.com/oasdiff/oasdiff-action/releases) and bump it when you choose. `@main` runs the unreleased tip and is meant for trying changes early, not for production.
 
 ---
 
