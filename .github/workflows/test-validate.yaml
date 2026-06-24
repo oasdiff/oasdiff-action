@@ -8,7 +8,7 @@ jobs:
     name: Test validate on a valid spec
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running validate action on a valid spec
         id: test_validate_valid
         uses: ./validate
@@ -26,7 +26,7 @@ jobs:
     name: Test validate fails on an invalid spec
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running validate action on an invalid spec
         id: test_validate_findings
         continue-on-error: true
@@ -49,7 +49,7 @@ jobs:
     name: Test validate severity threshold (--fail-on)
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Validate a warning-only spec with the default threshold
         id: test_validate_warn_default
         uses: ./validate

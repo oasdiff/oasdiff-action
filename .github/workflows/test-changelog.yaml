@@ -10,7 +10,7 @@ jobs:
       OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "21 changes: 2 error, 4 warning, 15 info"
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Running changelog action
         id: test_changelog
         uses: ./changelog
@@ -41,7 +41,7 @@ jobs:
     name: Test changelog action with composed option
     steps:
         - name: checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
         - name: Running changelog action with composed option
           id: test_changelog_composed
           uses: ./changelog
@@ -65,7 +65,7 @@ jobs:
     name: Test changelog action picks up level from .oasdiff.yaml
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Drop .oasdiff.yaml at repo root
         run: |
           cat > .oasdiff.yaml <<EOF
@@ -96,7 +96,7 @@ jobs:
     # the generic "verify the oasdiff-token" warning (misleading: the token is
     # fine, the plan lapsed).
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Stub oasdiff (402 subscription_expired on --open), run entrypoint
         run: |
           set -euo pipefail
@@ -166,7 +166,7 @@ jobs:
     # step summary. Guards the core Pro funnel action behavior in CI without the
     # full prod e2e.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Stub oasdiff + curl (Pro success), run entrypoint
         run: |
           set -euo pipefail
