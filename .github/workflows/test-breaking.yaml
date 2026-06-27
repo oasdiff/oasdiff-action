@@ -1,7 +1,8 @@
 name: breaking
 on:
-  pull_request:
   push:
+    branches: [main]
+  pull_request:
 jobs:
   oasdiff_breaking:
     runs-on: ubuntu-latest
