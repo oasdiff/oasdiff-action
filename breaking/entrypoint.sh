@@ -35,6 +35,20 @@ readonly github_token="${17}"
 # $1: the review URL, or empty to mark the PR as having no breaking changes
 #     (in that case it only updates an existing comment, never creates one, so
 #     a PR that never had changes stays comment-free).
+# report_review_delivery sends oasdiff.com one anonymous event saying whether
+# the review link was posted as a PR comment, fell back to the job summary,
+# or failed to post. This tells the maintainers how often users end up on the
+# summary fallback, which is what drives fixes to the defaults. It carries no
+# repo, organization, or user identity; action_ref is the action's own
+# version tag. Best-effort with a 5 second cap, a failure never affects the
+# run, and it is skipped when OASDIFF_INTERNAL=1 (the marker the CLI also
+# uses for internal test runs).
+report_review_delivery () {
+    delivery_mode="$1"
+    [ "${OASDIFF_INTERNAL:-}" = "1" ] && return 0
+    printf '{"event":"review_delivery","props":{"mode":"%s","platform":"github-action","action_ref":"%s"}}'         "$delivery_mode" "${GITHUB_ACTION_REF:-unknown}"         | curl -s -m 5 -o /dev/null -X POST -H "Content-Type: application/json"             "https://www.oasdiff.com/api/telemetry" --data-binary @- 2>/dev/null || true
+}
+
 post_review_comment () {
     review_url="$1"
     pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
@@ -44,6 +58,7 @@ post_review_comment () {
         # link is still in the job summary). This is the default for anyone who
         # upgraded the action version without adding github-token + permissions.
         if [ -n "$review_url" ] && [ -n "$pr_number" ]; then
+            report_review_delivery "summary"
             echo "::notice::oasdiff put the side-by-side review link in the job summary. To post it as a pull-request comment instead, pass 'github-token: \${{ github.token }}' to the action and grant the job 'permissions: pull-requests: write'. See https://www.oasdiff.com/docs/github-action"
         fi
         return 0
@@ -93,8 +108,10 @@ The link expires in 7 days.
         "$endpoint" --data-binary @- 2>/dev/null) || code="000"
 
     if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+        [ -n "$review_url" ] && report_review_delivery "comment"
         echo "oasdiff: posted the side-by-side review link as a PR comment."
     else
+        [ -n "$review_url" ] && report_review_delivery "comment_failed"
         echo "::notice::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is still in the job summary."
     fi
 }
