@@ -148,7 +148,7 @@ if [ "$include_path_params" = "true" ]; then
     flags="$flags --include-path-params"
 fi
 if [ -n "$include_checks" ]; then
-    flags="$flags --include-checks $include_checks"
+    echo "::warning::oasdiff: 'include-checks' is ignored, the optional-checks mechanism it drove was retired. To make a check fail the build, add 'severity-levels: <file>' to .oasdiff.yaml, listing the check id with level 'err', and set 'fail-on: ERR'."
 fi
 if [ -n "$deprecation_days_beta" ]; then
     flags="$flags --deprecation-days-beta $deprecation_days_beta"

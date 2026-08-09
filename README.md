@@ -99,7 +99,7 @@ jobs:
 | `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
 | `fail-on` | `''` | Fail with exit code 1 if changes are found at or above this severity | `ERR`, `WARN` |
-| `include-checks` | `''` | Include optional breaking change checks | check names (comma-separated) |
+| `include-checks` | `''` | **Deprecated and ignored.** oasdiff retired the optional-checks mechanism; set `severity-levels` in `.oasdiff.yaml` instead. Setting it emits a warning annotation and has no effect | — |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `deprecation-days-beta` | `31` | Minimum sunset period (days) for deprecation of beta API endpoints | integer |
 | `deprecation-days-stable` | `180` | Minimum sunset period (days) for deprecation of stable API endpoints | integer |
@@ -237,6 +237,15 @@ exclude-elements:
   - title
   - summary
 err-ignore: ./oasdiff-err-ignore.txt
+severity-levels: ./oasdiff-levels.txt
+```
+
+`severity-levels` points at a file that overrides the severity of individual checks, one `check-id level` per line, where level is `err`, `warn`, `info` or `none`. Raise a check to `err` (with `fail-on: ERR`) to make it fail the build, or set it to `none` to silence it:
+
+```
+# oasdiff-levels.txt
+api-version-not-bumped          err
+api-major-version-not-bumped    err
 ```
 
 The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions/checkout` populates), so no extra steps are needed.
