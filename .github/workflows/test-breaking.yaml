@@ -341,3 +341,30 @@ jobs:
             echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' (include-checks must be ignored, not forwarded) but got '$output'" >&2
             exit 1
           fi
+
+  oasdiff_breaking_unresolved_ref:
+    runs-on: ubuntu-latest
+    name: Test a failed comparison is not reported as clean
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Run breaking action against a spec that cannot be loaded
+        id: test_unresolved_ref
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/unresolved-ref.yaml'
+          revision: 'specs/unresolved-ref.yaml'
+          review: false
+      - name: Assert the step failed and reported no clean result
+        run: |
+          if [ "${{ steps.test_unresolved_ref.outcome }}" != "failure" ]; then
+            echo "Expected the action to fail when the spec cannot be loaded" >&2
+            exit 1
+          fi
+          case "${{ steps.test_unresolved_ref.outputs.breaking }}" in
+            *"No breaking changes"*)
+              echo "A failed comparison must never be reported as 'No breaking changes'" >&2
+              exit 1
+              ;;
+          esac

@@ -91,13 +91,18 @@ fi
 # Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
 # success and exit 1 is the intended fail-on-diff result; only codes >=2
 # (load/parse/etc.) are real errors worth surfacing here.
-if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
-    echo "::error::$(tr '\n' ' ' < "$_err")"
-fi
-# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
-# not message text). Surface the action-specific remedy.
-if [ "$exit_code" -eq 123 ]; then
-    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+# Stop here on a real failure: the comparison never ran, so there is nothing to
+# report about it. Falling through would report a clean result for a run that
+# failed. Matches the changelog action.
+if [ "$exit_code" -ge 2 ]; then
+    [ -s "$_err" ] && echo "::error::$(tr '\n' ' ' < "$_err")"
+    # Exit code 123 = oasdiff refused a disallowed external $ref (stable
+    # contract, not message text). Surface the action-specific remedy.
+    if [ "$exit_code" -eq 123 ]; then
+        echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff action step."
+    fi
+    rm -f "$_err"
+    exit "$exit_code"
 fi
 rm -f "$_err"
 

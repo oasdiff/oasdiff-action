@@ -84,3 +84,32 @@ jobs:
             echo "Expected the step to fail with fail-on WARN" >&2
             exit 1
           fi
+
+  oasdiff_validate_unresolved_ref:
+    runs-on: ubuntu-latest
+    name: Test a failed validation is not reported as clean
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Run validate action against a spec that cannot be loaded
+        id: test_unresolved_ref
+        continue-on-error: true
+        uses: ./validate
+        with:
+          spec: 'specs/unresolved-ref.yaml'
+      - name: Assert the step failed and published no finding counts
+        run: |
+          if [ "${{ steps.test_unresolved_ref.outcome }}" != "failure" ]; then
+            echo "Expected the action to fail when the spec cannot be loaded" >&2
+            exit 1
+          fi
+          # A spec that never loaded produces no findings to count. Publishing
+          # 0 would read as a clean spec to anything gating on these.
+          if [ "${{ steps.test_unresolved_ref.outputs.findings }}" = "0" ]; then
+            echo "A failed validation must not report findings=0" >&2
+            exit 1
+          fi
+          if [ "${{ steps.test_unresolved_ref.outputs.error_count }}" = "0" ]; then
+            echo "A failed validation must not report error_count=0" >&2
+            exit 1
+          fi
