@@ -38,13 +38,18 @@ oasdiff validate $flags --format githubactions "$spec" 2>"$_err" || exit_code=$?
 # Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
 # success and exit 1 is the intended fail-on result; only codes >=2
 # (load/parse/etc.) are real errors worth surfacing here.
-if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
-    echo "::error::$(tr '\n' ' ' < "$_err")"
-fi
-# Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
-# not message text). Surface the action-specific remedy.
-if [ "$exit_code" -eq 123 ]; then
-    echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff validate step."
+if [ "$exit_code" -ge 2 ]; then
+    [ -s "$_err" ] && echo "::error::$(tr '\n' ' ' < "$_err")"
+    # Exit code 123 = oasdiff refused a disallowed external $ref (stable
+    # contract, not message text). Surface the action-specific remedy.
+    if [ "$exit_code" -eq 123 ]; then
+        echo "::error::oasdiff: this spec resolves external \$refs, which are disabled by default to prevent SSRF on untrusted pull requests. If the spec is trusted, set 'allow-external-refs: true' on the oasdiff validate step."
+    fi
+    rm -f "$_err"
+    # Stop here. Run 2 below would fail the same way and print nothing, and the
+    # count that reads it cannot tell that from a valid spec, so the outputs
+    # would say findings=0 and error_count=0 for a spec that never loaded.
+    exit "$exit_code"
 fi
 rm -f "$_err"
 
