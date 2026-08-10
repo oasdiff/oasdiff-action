@@ -32,9 +32,9 @@ readonly github_token="${17}"
 # API call returns 403 and we fall back to the job summary, which is always
 # written regardless.
 #
-# $1: the review URL, or empty to mark the PR as having no breaking changes
-#     (in that case it only updates an existing comment, never creates one, so
-#     a PR that never had changes stays comment-free).
+# $1: the review URL, or empty when no review URL is available.
+# $2: comparison status: no_changes, breaking_changes, or comparison_error.
+# $3: comparison error text, when status is comparison_error.
 # report_review_delivery sends oasdiff.com one anonymous event saying whether
 # the review link was posted as a PR comment, fell back to the job summary,
 # or failed to post. This tells the maintainers how often users end up on the
@@ -51,6 +51,8 @@ report_review_delivery () {
 
 post_review_comment () {
     review_url="$1"
+    comparison_status="$2"
+    comparison_error="$3"
     pr_number=$(echo "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/merge|\1|p')
     if [ -z "$github_token" ]; then
         # No token to comment with. If we produced a review link on a PR, nudge
@@ -77,7 +79,12 @@ post_review_comment () {
         "${api}/repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100" 2>/dev/null \
         | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
 
-    if [ -n "$review_url" ]; then
+    if [ "$comparison_status" = "comparison_error" ]; then
+        body="${marker}
+### ❌ OpenAPI comparison failed
+
+${comparison_error}"
+    elif [ -n "$review_url" ]; then
         body="${marker}
 ### 📋 [View the side-by-side API change review](${review_url})
 
@@ -109,7 +116,11 @@ The link expires in 7 days.
 
     if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
         [ -n "$review_url" ] && report_review_delivery "comment"
-        echo "oasdiff: posted the side-by-side review link as a PR comment."
+        if [ "$comparison_status" = "comparison_error" ]; then
+            echo "oasdiff: posted the comparison error as a PR comment."
+        else
+            echo "oasdiff: posted the side-by-side review link as a PR comment."
+        fi
     else
         [ -n "$review_url" ] && report_review_delivery "comment_failed"
         echo "::notice::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is still in the job summary."
@@ -190,10 +201,11 @@ exit_code=0
 _err=$(mktemp)
 breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag 2>"$_err") || exit_code=$?
 [ -s "$_err" ] && cat "$_err" >&2
+first_error=$(cat "$_err")
 # Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
 # success and exit 1 is the intended "breaking changes found" / fail-on result;
 # only codes >=2 (load/parse/etc.) are real errors worth surfacing here.
-if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
+    if [ "$exit_code" -ge 2 ] && [ -s "$_err" ]; then
     echo "::error::$(tr '\n' ' ' < "$_err")"
 fi
 # Exit code 123 = oasdiff refused a disallowed external $ref (stable contract,
@@ -229,65 +241,76 @@ echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 # The explicit --fail-on overrides a config fail-on for this probe only; Run 1's
 # authoritative gate exit code is untouched.
 changes_exit=0
-oasdiff breaking "$base" "$revision" $flags --fail-on=WARN --template= >/dev/null 2>&1 || changes_exit=$?
-if [ "$changes_exit" -eq 1 ]; then
+_probe_err=$(mktemp)
+oasdiff breaking "$base" "$revision" $flags --fail-on=WARN --template= >/dev/null 2>"$_probe_err" || changes_exit=$?
+probe_error=$(cat "$_probe_err")
+rm -f "$_probe_err"
+
+free_review_url=""
+
+if [ "$exit_code" -ge 2 ] || [ "$exit_code" -eq 123 ]; then
+    comparison_error="$first_error"
+    if [ -z "$comparison_error" ]; then
+        comparison_error="oasdiff could not compare the specifications (exit code $exit_code)."
+    fi
+    comparison_report=$(printf 'OpenAPI comparison failed\n\n%s' "$comparison_error")
+    comparison_status="comparison_error"
+    write_output "$comparison_report"
+    printf '### ❌ OpenAPI comparison failed\n\n%s\n' "$comparison_error" >> "$GITHUB_STEP_SUMMARY"
+    post_review_comment "" "comparison_error" "$comparison_error"
+elif [ "$exit_code" -eq 1 ] || [ "$changes_exit" -eq 1 ]; then
+    comparison_status="breaking_changes"
+    comparison_error=""
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 
-    free_review_url=""
     # review (default true): upload the comparison to oasdiff.com and link
-    # straight to the rendered side-by-side review. The upload is
-    # zero-knowledge -- the oasdiff binary encrypts the two specs client-side
-    # and the decryption key lives only in the URL #fragment, so the server
-    # stores a blob it cannot read. Set review: false to skip the upload
-    # entirely, so no spec ever leaves CI; the breaking-change detection and
-    # the inline annotations are unaffected either way.
+    # straight to the rendered side-by-side review. The specs are encrypted
+    # client-side and the key remains only in the URL fragment.
     if [ "$review" != "false" ]; then
         if [ "$composed" = "true" ]; then
-            # Composed mode (-c) diffs globs of many files; the side-by-side
-            # review represents exactly two specs, so --open can't build it.
-            # Say so once instead of running --open only to hit the generic
-            # "couldn't upload" warning below.
             echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The breaking-change report above is unaffected."
         else
-            # --open prints the review URL to stderr (oasdiff >= v1.19.1 moved it
-            # off stdout so it can't corrupt piped --format output); in CI the
-            # browser-open step soft-fails. Merge stderr into the pipe (2>&1) and
-            # grep the /review/e/ URL out by its stable path shape (not by
-            # surrounding prose). Tolerate a non-zero exit / no match so `set -e`
-            # doesn't abort the run. --template= overrides a 'template' set in
-            # .oasdiff.yaml, which would otherwise error this render (templates
-            # are rejected for the default text format) and yield no URL.
             free_review_url=$(oasdiff breaking "$base" "$revision" $flags --open --template= 2>&1 \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
                 echo "### 📋 [View these breaking changes in a side-by-side review](${free_review_url})" >> "$GITHUB_STEP_SUMMARY"
-                # Also surface the link on the PR itself (best-effort) so
-                # reviewers don't have to find the job summary.
-                post_review_comment "$free_review_url"
+                post_review_comment "$free_review_url" "breaking_changes" ""
             else
-                # review was requested but no link came back: an offline runner,
-                # oasdiff.com unreachable, or an older oasdiff in the base image.
-                # Warn rather than emit a link -- there's no useful local
-                # fallback (if the upload failed because the host is unreachable,
-                # a manual run would fail the same way), and the report above
-                # still stands.
                 echo "::warning::oasdiff: couldn't upload the side-by-side review (the breaking-change report still ran). Re-run the job, or set 'review: false' to skip the upload."
             fi
         fi
     fi
+elif [ "$changes_exit" -ge 2 ] || [ "$changes_exit" -eq 123 ]; then
+    comparison_error="$probe_error"
+    if [ -z "$comparison_error" ]; then
+        comparison_error="oasdiff could not compare the specifications (exit code $changes_exit)."
+    fi
+    comparison_report=$(printf 'OpenAPI comparison failed\n\n%s' "$comparison_error")
+    comparison_status="comparison_error"
+    write_output "$comparison_report"
+    printf '### ❌ OpenAPI comparison failed\n\n%s\n' "$comparison_error" >> "$GITHUB_STEP_SUMMARY"
+    post_review_comment "" "comparison_error" "$comparison_error"
 else
+    comparison_status="no_changes"
+    comparison_error=""
     write_output "No breaking changes"
     # Keep an existing review comment honest when a later push fixes the
     # breaking changes; never create one for an always-clean PR.
     if [ "$review" != "false" ]; then
-        post_review_comment ""
+        post_review_comment "" "no_changes" ""
     fi
 fi
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
 # review_url is a single-line output, written after the multiline `breaking`
-# block is closed so it doesn't get folded into that value. Empty when there
-# are no breaking changes (the notice/URL only fire then).
+# block is closed so it doesn't get folded into that value.
+echo "comparison-status=$comparison_status" >> "$GITHUB_OUTPUT"
+if [ -n "$comparison_error" ]; then
+    single_line_error=$(echo "$comparison_error" | tr '\n' ' ')
+    echo "comparison-error=$single_line_error" >> "$GITHUB_OUTPUT"
+else
+    echo "comparison-error=" >> "$GITHUB_OUTPUT"
+fi
 echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
 
 exit $exit_code

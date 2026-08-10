@@ -205,6 +205,41 @@ jobs:
             exit 1
           fi
 
+  oasdiff_breaking_comparison_error:
+    runs-on: ubuntu-latest
+    name: Test comparison errors are not reported as clean
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Run breaking action against an unresolved external reference
+        id: test_comparison_error
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/external-ref.yaml'
+          revision: 'specs/external-ref.yaml'
+          output-to-file: 'comparison-error.txt'
+          review: false
+      - name: Assert comparison error is reported explicitly
+        run: |
+          if [ "${{ steps.test_comparison_error.outcome }}" != "failure" ]; then
+            echo "Expected the action to fail when oasdiff cannot resolve an external reference" >&2
+            exit 1
+          fi
+          if [ "${{ steps.test_comparison_error.outputs.comparison-status }}" != "comparison_error" ]; then
+            echo "Expected comparison-status=comparison_error, got '${{ steps.test_comparison_error.outputs.comparison-status }}'" >&2
+            exit 1
+          fi
+          if grep -q "No breaking changes" comparison-error.txt; then
+            echo "Comparison errors must never be reported as No breaking changes" >&2
+            exit 1
+          fi
+          if ! grep -q "OpenAPI comparison failed" comparison-error.txt; then
+            echo "Expected an explicit comparison failure report" >&2
+            exit 1
+          fi
+          echo "Comparison error reporting is explicit"
+
   # ---------------------------------------------------------------------
   # .oasdiff.yaml config-file support — verify all three free actions
   # pick up .oasdiff.yaml from the repo root automatically (via the CLI's

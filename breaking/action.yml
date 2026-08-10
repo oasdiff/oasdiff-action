@@ -67,6 +67,10 @@ inputs:
 outputs:
   breaking:
     description: 'Output summary of API breaking changes, encompassing both warnings and errors'
+  comparison-status:
+    description: 'Comparison result: no_changes, breaking_changes, or comparison_error'
+  comparison-error:
+    description: 'Error reported when the specifications could not be compared'
   review_url:
     description: 'URL of the free oasdiff review page for these changes (empty when there are no breaking changes)'
 runs:
