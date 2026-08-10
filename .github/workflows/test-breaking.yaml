@@ -25,6 +25,10 @@ jobs:
           output-to-file: 'breaking.txt'
       - name: Test breaking changes action output
         run: |
+          if [ "${{ steps.test_breaking_changes.outputs.comparison-status }}" != "breaking_changes" ]; then
+            echo "Expected comparison-status=breaking_changes, got '${{ steps.test_breaking_changes.outputs.comparison-status }}'" >&2
+            exit 1
+          fi
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
           output=$(cat <<-$delimiter
           ${{ steps.test_breaking_changes.outputs.breaking }}
@@ -195,6 +199,10 @@ jobs:
           err-ignore: 'specs/err-ignore.txt'
       - name: Test breaking changes are suppressed
         run: |
+          if [ "${{ steps.test_breaking_err_ignore.outputs.comparison-status }}" != "no_changes" ]; then
+            echo "Expected comparison-status=no_changes, got '${{ steps.test_breaking_err_ignore.outputs.comparison-status }}'" >&2
+            exit 1
+          fi
           delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
           output=$(cat <<-$delimiter
           ${{ steps.test_breaking_err_ignore.outputs.breaking }}
