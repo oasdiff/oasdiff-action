@@ -1,0 +1,11 @@
+# A spec whose $ref cannot be resolved, so oasdiff fails to load it.
+# Used to check that a failed comparison is never reported as a clean result.
+openapi: 3.0.0
+info:
+  title: unresolved-ref
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Missing:
+      $ref: './no-such-file.yaml#/Missing'
