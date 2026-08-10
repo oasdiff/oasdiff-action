@@ -277,3 +277,67 @@ jobs:
             echo "Expected 'No breaking changes' (err-ignore from .oasdiff.yaml should suppress findings) but got '$output'" >&2
             exit 1
           fi
+
+  oasdiff_breaking_yaml_config_severity_levels:
+    runs-on: ubuntu-latest
+    name: Test breaking action picks up severity-levels from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      # specs/severity-levels.txt downgrades api-removed-without-deprecation to
+      # info, so the one breaking change these specs produce stops being an
+      # error and fail-on: ERR no longer fails the step.
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          severity-levels: specs/severity-levels.txt
+          fail-on: ERR
+          EOF
+      - name: Running breaking action
+        id: test_yaml_severity_levels
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+      - name: Assert the finding was downgraded by .oasdiff.yaml
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_yaml_severity_levels.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "No breaking changes" ]; then
+            echo "Expected 'No breaking changes' (severity-levels from .oasdiff.yaml should downgrade the finding to info) but got '$output'" >&2
+            exit 1
+          fi
+
+  oasdiff_breaking_include_checks_deprecated:
+    runs-on: ubuntu-latest
+    name: Test include-checks is warned about, not applied
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      # include-checks is ignored by oasdiff. The action must not pass it on and
+      # must not change the result; it only warns. Passing a name that is not a
+      # real check would fail the run if the action still forwarded it.
+      - name: Running breaking action with include-checks
+        id: test_include_checks
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          include-checks: 'not-a-real-check'
+      - name: Assert the run was unaffected
+        run: |
+          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          output=$(cat <<-$delimiter
+          ${{ steps.test_include_checks.outputs.breaking }}
+          $delimiter
+          )
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' (include-checks must be ignored, not forwarded) but got '$output'" >&2
+            exit 1
+          fi
