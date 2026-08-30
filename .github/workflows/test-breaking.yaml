@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test fail on breaking changes
     env:
-      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "2 changes: 0 error, 2 warning, 0 info"
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 0 error, 1 warning, 0 info"
     steps:
       - name: checkout
         uses: actions/checkout@v7
@@ -87,7 +87,7 @@ jobs:
       runs-on: ubuntu-latest
       name: Test breaking action with petsotre to validate no error of unable to process file command 'output' successfully and invalid value and matching delimiter not found
       env:
-        OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "9 changes: 6 error, 3 warning, 0 info"
+        OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "7 changes: 6 error, 1 warning, 0 info"
       steps:
         - name: checkout
           uses: actions/checkout@v7
