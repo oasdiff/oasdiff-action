@@ -59,6 +59,7 @@ jobs:
             echo "$out" | grep -q '::error::' || fail "$cmd: exit 102 must emit a ::error:: annotation"
 
             # disallowed external ref (exit 123): the allow-external-refs remedy
+            # shellcheck disable=SC2016 # the $ref in the message is literal
             out=$(invoke 123 'Error: external $ref not allowed: https://evil' "$cmd" 2>/dev/null || true)
             echo "$out" | grep -q 'allow-external-refs: true' || fail "$cmd: exit 123 must emit the allow-external-refs remedy"
 

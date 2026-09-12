@@ -17,6 +17,7 @@ write_output () {
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
+    # shellcheck disable=SC2000 # bytes, not characters, deliberately; see the comment above
     size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
@@ -157,6 +158,7 @@ pro_review () {
     # URL (key in the #fragment) plus "oasdiff: review status: <state>" to stderr.
     # Tolerate a non-zero exit; --open is additive. --review-meta carries the PR
     # context as an opaque bag the CLI forwards without interpreting.
+    # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
     pro_out=$(oasdiff changelog "$base" "$revision" $flags --open --template= \
         --review-token "$oasdiff_token" \
         --review-meta owner="$owner" \
@@ -359,6 +361,7 @@ echo "changelog<<$delimiter" >>"$GITHUB_OUTPUT"
 
 exit_code=0
 _err=$(mktemp)
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags 2>"$_err") || exit_code=$?
 # Only codes >=2 are real errors. Exit 1 is a fail-on result (the changelog
 # action has no fail-on input, but .oasdiff.yaml can set one); the changelog
@@ -387,6 +390,7 @@ rm -f "$_err"
 # in .oasdiff.yaml, which would otherwise error this probe (templates are rejected
 # for the default text format) and make it a false negative.
 changes_exit=0
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 oasdiff changelog "$base" "$revision" $flags --fail-on=INFO --template= >/dev/null 2>&1 || changes_exit=$?
 if [ "$changes_exit" -eq 1 ]; then
     write_output "$output"
@@ -424,6 +428,7 @@ if [ "$changes_exit" -eq 1 ]; then
             # doesn't abort the run. --template= overrides a 'template' set in
             # .oasdiff.yaml, which would otherwise error this render (templates
             # are rejected for the default text format) and yield no URL.
+            # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
             free_review_url=$(oasdiff changelog "$base" "$revision" $flags --open --template= 2>&1 \
                 | grep -oE 'https://[^[:space:]]+/review/e/[^[:space:]]+' | head -n 1) || true
             if [ -n "$free_review_url" ]; then
