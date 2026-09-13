@@ -47,6 +47,7 @@ _err=$(mktemp)
 specs_found=false
 external_ref_blocked=false
 set +e
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 oasdiff changelog "$base" "$revision" --format json $flags >/dev/null 2>"$_err"
 oasdiff_exit=$?
 set -e

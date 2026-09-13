@@ -55,13 +55,11 @@ jobs:
             revision: 'specs/glob/revision/*.yaml'
             composed: true
         - name: Test changelog action output
+          env:
+            ACTUAL_OUTPUT: ${{ steps.test_changelog_composed.outputs.changelog }}
           run: |
-            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-            output=$(cat <<-$delimiter
-            ${{ steps.test_changelog_composed.outputs.changelog }}
-            $delimiter
-            )
-            if [[ ! "$output" =~ "1 changes: 1 error, 0 warning, 0 info" ]]; then
+            output="$ACTUAL_OUTPUT"
+            if [[ "$output" != *"1 changes: 1 error, 0 warning, 0 info"* ]]; then
               echo "Expected '1 changes: 1 error, 0 warning, 0 info', instead got '$output'" >&2
               exit 1
             fi

@@ -17,6 +17,7 @@ write_output () {
     fi
     # github-action limits output to 1MB
     # we count bytes because unicode has multibyte characters
+    # shellcheck disable=SC2000 # bytes, not characters, deliberately; see the comment above
     size=$(echo "$output" | wc -c)
     if [ "$size" -ge "1000000" ]; then
         echo "WARN: diff exceeds the 1MB limit, truncating output..." >&2
@@ -83,6 +84,7 @@ echo "diff<<$delimiter" >>"$GITHUB_OUTPUT"
 exit_code=0
 _err=$(mktemp)
 if [ -n "$flags" ]; then
+    # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
     output=$(oasdiff diff "$base" "$revision" $flags 2>"$_err") || exit_code=$?
 else
     output=$(oasdiff diff "$base" "$revision" 2>"$_err") || exit_code=$?

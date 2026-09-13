@@ -43,6 +43,7 @@ fi
 # still abort because they leave $changelog empty.
 oasdiff_exit=0
 _err=$(mktemp)
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 changelog=$(oasdiff changelog "$base" "$revision" --format json $flags 2>"$_err") || oasdiff_exit=$?
 if [ "$oasdiff_exit" -ne 0 ] && [ -z "$changelog" ]; then
     [ -s "$_err" ] && cat "$_err" >&2

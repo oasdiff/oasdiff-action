@@ -33,6 +33,7 @@ echo "flags: $flags"
 # below; the exit code is reapplied at the end.
 exit_code=0
 _err=$(mktemp)
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 oasdiff validate $flags --format githubactions "$spec" 2>"$_err" || exit_code=$?
 [ -s "$_err" ] && cat "$_err" >&2
 # Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
@@ -55,6 +56,7 @@ rm -f "$_err"
 
 # Run 2: text format, captured for the finding count. Tolerate non-zero
 # exit (the authoritative decision is already captured above).
+# shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
 findings_text=$(oasdiff validate $flags "$spec") || true
 
 # *** GitHub Action step output ***

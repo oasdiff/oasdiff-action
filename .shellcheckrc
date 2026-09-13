@@ -1,0 +1,2 @@
+# The entrypoints run under Alpine ash, where local is supported.
+disable=SC3043

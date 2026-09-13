@@ -43,12 +43,10 @@ jobs:
             format: 'text'
             exclude-elements: 'description,title,summary'
         - name: Test diff action output
+          env:
+            ACTUAL_OUTPUT: ${{ steps.test_exclude_elements.outputs.diff }}
           run: |
-            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-            output=$(cat <<-$delimiter
-            ${{ steps.test_exclude_elements.outputs.diff }}
-            $delimiter
-            )
+            output="$ACTUAL_OUTPUT"
             if [ "$output" != "No changes" ]; then
               echo "Expected output 'No changes' but got '$output'" >&2
               exit 1
@@ -68,13 +66,11 @@ jobs:
             format: 'text'
             composed: true
         - name: Test diff action output
+          env:
+            ACTUAL_OUTPUT: ${{ steps.test_composed.outputs.diff }}
           run: |
-            delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-            output=$(cat <<-$delimiter
-            ${{ steps.test_composed.outputs.diff }}
-            $delimiter
-            )
-            if [[ ! "$output" =~ "Deleted Endpoints: 1" ]]; then
+            output="$ACTUAL_OUTPUT"
+            if [[ "$output" != *"Deleted Endpoints: 1"* ]]; then
               echo "Expected 'Deleted Endpoints: 1' to be modified in diff, instead got '$output'" >&2
               exit 1
             fi
@@ -100,12 +96,10 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/base-exclude-elements.yaml'
       - name: Assert diff is empty thanks to exclude-elements from .oasdiff.yaml
+        env:
+          ACTUAL_OUTPUT: ${{ steps.test_yaml_exclude_elements.outputs.diff }}
         run: |
-          delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-          output=$(cat <<-$delimiter
-          ${{ steps.test_yaml_exclude_elements.outputs.diff }}
-          $delimiter
-          )
+          output="$ACTUAL_OUTPUT"
           if [ "$output" != "No changes" ]; then
             echo "Expected 'No changes' (exclude-elements from .oasdiff.yaml should filter description/title/summary) but got '$output'" >&2
             exit 1
