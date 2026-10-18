@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test generation of changelog
     env:
-      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "22 changes: 4 error, 4 warning, 14 info"
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "24 changes: 4 error, 4 warning, 16 info"
     steps:
       - name: checkout
         uses: actions/checkout@v7
@@ -82,7 +82,7 @@ jobs:
           revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
       - name: Assert level filter from .oasdiff.yaml suppressed warning/info findings
         run: |
-          # Without the YAML, the same specs produce "22 changes: 4 error, 4 warning, 14 info".
+          # Without the YAML, the same specs produce "24 changes: 4 error, 4 warning, 16 info".
           # With level: ERR in YAML, only the 4 errors should remain.
           output=$(echo "${{ steps.test_yaml_level.outputs.changelog }}" | head -n 1)
           if [[ "$output" != "4 changes: 4 error, 0 warning, 0 info" ]]; then
