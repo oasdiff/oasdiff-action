@@ -1,4 +1,4 @@
-FROM tufin/oasdiff:v1.34.1
+FROM tufin/oasdiff:v1.35.0
 RUN apk add --no-cache curl jq
 ENV PLATFORM github-action
 COPY entrypoint.sh /entrypoint.sh
