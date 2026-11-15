@@ -117,7 +117,7 @@ jobs:
 
 ### Generate a changelog
 
-Outputs the changes that can affect API consumers (breaking and non-breaking) between two specs. Documentation-only edits, such as descriptions and examples, are not included; use the [diff action](#generate-a-diff-report) to see every difference in the API definition. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
+Outputs the changes that can affect API consumers (breaking and non-breaking) between two specs, and writes inline annotations on the pull request's Files changed tab for the ones at error and warning level. Documentation-only edits, such as descriptions and examples, are not included; use the [diff action](#generate-a-diff-report) to see every difference in the API definition. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
 
 ```yaml
 name: oasdiff
