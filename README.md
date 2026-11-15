@@ -97,7 +97,7 @@ jobs:
 |---|---|---|
 | `base` | required | The base (old) OpenAPI spec: a file path, a URL, or a git ref such as `origin/main:openapi.yaml` |
 | `revision` | required | The revised (new) OpenAPI spec, in the same forms |
-| `fail-on` | `''` | Fail the job when a change is at or above this severity: `ERR` or `WARN`, or `MISSING-VERSION-BUMP` to fail only when breaking changes come without a major version increase in `info.version`. Empty never fails |
+| `fail-on` | `''` | Fail the job when a change is at or above this severity: `ERR` or `WARN`, or `MISSING-VERSION-BUMP` to fail only when breaking changes come without a major version increase in `info.version`. Empty never fails. This is policy rather than a fact about the run: once you have a `.oasdiff.yaml`, set it there |
 | `oasdiff-token` | `''` | Your oasdiff Pro token. See [Pro: Approve and gate changes](#pro-approve-and-gate-changes) |
 | `github-token` | `${{ github.token }}` | Token used to post the comment. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to `''` to keep the review link in the job summary only |
 | `review` | `true` | Upload the encrypted comparison and link to the side-by-side review. Set `false` so that no spec leaves CI; annotations and the job result are unaffected |
@@ -106,7 +106,7 @@ jobs:
 | `composed` | `false` | Run in [composed mode](https://github.com/oasdiff/oasdiff/blob/main/docs/COMPOSED.md), comparing globs of spec files |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Off by default to prevent SSRF on untrusted pull requests; set `true` if your spec references external URLs you trust |
 
-These inputs describe the run. How oasdiff judges the API is configuration, and it goes in [`.oasdiff.yaml`](#configuring-with-oasdiffyaml): ignore files, severity levels, `flatten-allof`, `exclude-elements`, `filter-extension`, `include-path-params`, the deprecation windows, and every other oasdiff flag. The inputs of those names that earlier versions documented still work.
+These inputs describe the run, with one exception: `fail-on` is policy, and is an input so that a workflow can block a merge without a second file. How oasdiff judges the API is configuration, and it goes in [`.oasdiff.yaml`](#configuring-with-oasdiffyaml): the severity that fails the job, ignore files, severity levels, `flatten-allof`, `exclude-elements`, `filter-extension`, `include-path-params`, the deprecation windows, and every other oasdiff flag. The inputs of those names that earlier versions documented still work.
 
 ### Generate a changelog
 
@@ -187,7 +187,7 @@ For a non-blocking, report-only run, leave `fail-on` and set `continue-on-error:
 
 ## Configuring with `.oasdiff.yaml`
 
-Action inputs cover what a run needs: which specs to compare, the tokens, and whether to fail the job. Everything about how oasdiff judges the API (ignore files, severity levels, exclusions, deprecation windows) goes in `.oasdiff.yaml`, where every oasdiff flag works and the same file gives you the same answer when you run oasdiff locally.
+Action inputs cover what a run needs: which specs to compare and the tokens. Everything about how oasdiff judges the API (the severity that fails the job, ignore files, severity levels, exclusions, deprecation windows) goes in `.oasdiff.yaml`, where every oasdiff flag works and the same file gives you the same answer when you run oasdiff locally.
 
 The `breaking`, `changelog` and `diff` actions automatically pick up a `.oasdiff.yaml` file from the root of your checked-out repository. This lets you keep CLI-flag-shaped configuration in source control instead of repeating the same `with:` block in every workflow file.
 
