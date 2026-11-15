@@ -699,6 +699,17 @@ run_changelog () {
     fi
     rm -f "$_err"
 
+    # Inline annotations for the error and warning changes, on the lines they
+    # are on, as the breaking action writes them. Info changes are filtered
+    # out: a changelog can hold one per added property, and a notice for each
+    # would bury the ones that matter. The format also writes error_count,
+    # warning_count and info_count to GITHUB_OUTPUT, which this action does
+    # not declare, so that is pointed away. --template= overrides a 'template'
+    # set in .oasdiff.yaml, which this format rejects.
+    # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
+    GITHUB_OUTPUT=/dev/null oasdiff changelog "$base" "$revision" $flags --format githubactions --template= 2>/dev/null \
+        | grep -v '^::notice' || true
+
     # One json render answers two questions, how many changes there are and what
     # they are, so the count below and the PR comment read the same data. The
     # user-facing $output cannot be parsed for either: it varies by format

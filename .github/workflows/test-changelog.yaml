@@ -427,3 +427,59 @@ jobs:
             echo "Expected the step to fail: .oasdiff.yaml sets fail-on: ERR. Got: ${{ steps.test_yaml_fail_on.outcome }}" >&2
             exit 1
           fi
+
+  oasdiff_changelog_annotations:
+    runs-on: ubuntu-latest
+    name: Test changelog action annotates errors and warnings, not info
+    # The changelog action writes the same inline annotations as breaking, for
+    # the changes at error and warning level. Info changes are left out, since
+    # a changelog can hold one per added property. Stubs oasdiff to emit one
+    # annotation at each level.
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff, run entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) printf '[]'; exit 0 ;;
+              githubactions)
+                echo "::error title=an-error,file=openapi.yaml,line=3::in API GET /a broke"
+                echo "::warning title=a-warning,file=openapi.yaml,line=4::in API GET /a may break"
+                echo "::notice title=an-info,file=openapi.yaml,line=5::in API GET /a changed"
+                # this format reports counts through GITHUB_OUTPUT
+                echo "info_count=1" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+            esac
+          done
+          echo "3 changes: 1 error, 1 warning, 1 info"
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=acme/widgets
+          export GITHUB_OUTPUT=/tmp/run/out; : > "$GITHUB_OUTPUT"
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary; : > "$GITHUB_STEP_SUMMARY"
+          export PATH=/tmp/stub:$PATH
+
+          out=$(env OASDIFF_ACTION_COMMAND=changelog INPUT_BASE=b INPUT_REVISION=r INPUT_REVIEW=false \
+            bash ./breaking/entrypoint.sh 2>&1)
+          echo "$out"
+
+          for expected in '::error title=an-error' '::warning title=a-warning'; do
+            case "$out" in
+              *"$expected"*) ;;
+              *) echo "FAIL: missing annotation: $expected" >&2; exit 1 ;;
+            esac
+          done
+          case "$out" in
+            *'::notice title=an-info'*) echo "FAIL: an info change was annotated" >&2; exit 1 ;;
+          esac
+          if grep -q "info_count" "$GITHUB_OUTPUT"; then
+            echo "FAIL: the annotation format's counts leaked into the action's outputs" >&2; exit 1
+          fi
+          echo "PASS"
