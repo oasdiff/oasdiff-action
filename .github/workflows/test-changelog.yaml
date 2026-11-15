@@ -111,7 +111,7 @@ jobs:
           # on the args.
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"abc123def456"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo 'Error: upload failed (HTTP 402): {"code":"subscription_expired","message":"Your oasdiff trial or subscription has expired. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro.","upgrade_url":"https://www.oasdiff.com/pricing"}' >&2
@@ -178,7 +178,7 @@ jobs:
 
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"abc123def456"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
@@ -240,8 +240,8 @@ jobs:
           for expected in \
             '1 API change in this pull request' \
             'status check on this pull request shows whether they are all approved' \
-            '| severity | change | endpoint |' \
-            'api-removed-without-deprecation' \
+            '| severity | change | endpoint | diff |' \
+            'API removed' \
             'Review and approve the changes'
           do
             case "$pro_body" in
@@ -289,7 +289,7 @@ jobs:
               printf ',{"id":"response-property-became-optional","text":"added @octocat [l](https://e.example) <b>","level":1,"operation":"POST","path":"/pets","section":"paths"}'
               i=3
               while [ "$i" -le 6 ]; do
-                printf ',{"id":"request-property-added","text":"added","level":1,"operation":"PUT","path":"/pets%s","section":"paths"}' "$i"
+                printf ',{"id":"request-property-added","text":"added","level":1,"operation":"PUT","path":"/pets%s","section":"paths","fingerprint":"fp%s"}' "$i" "$i"
                 i=$((i+1))
               done
               printf ']'
@@ -339,8 +339,8 @@ jobs:
           echo "$body"
           for expected in \
             '6 API changes in this pull request' \
-            'api-removed-without-deprecation' \
-            'response-property-became-optional' \
+            '| severity | change | endpoint | diff |' \
+            '<code>PUT /pets3</code> | [view](https://www.oasdiff.com/review/e/stub-id?highlight=fp3#k=stub-key) |' \
             '| error | ' \
             '| info | ' \
             '<details><summary>1 more</summary>' \

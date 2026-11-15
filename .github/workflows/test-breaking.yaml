@@ -379,7 +379,7 @@ jobs:
               i=1
               while [ "$i" -le 7 ]; do
                 [ "$i" -gt 1 ] && printf ','
-                printf '{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets%s","section":"paths"}' "$i"
+                printf '{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets%s","section":"paths","fingerprint":"fp%s"}' "$i" "$i"
                 i=$((i+1))
               done
               printf ']'
@@ -433,10 +433,8 @@ jobs:
           echo "$body"
           for expected in \
             '7 breaking changes in this pull request' \
-            '| severity | change | endpoint |' \
-            'API removed [' \
-            'https://www.oasdiff.com/checks/api-removed-without-deprecation' \
-            'GET /pets5' \
+            '| severity | change | endpoint | diff |' \
+            '| error | API removed | <code>GET /pets5</code> | [view](https://www.oasdiff.com/review/e/stub-id?highlight=fp5#k=stub-key) |' \
             '<details><summary>2 more</summary>' \
             'GET /pets6' \
             'oasdiff Pro'
@@ -485,7 +483,7 @@ jobs:
             esac
           done
           case "${fmt:-text}" in
-            json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]' ;;
+            json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"abc123def456"}]' ;;
             gha) echo "::error file=specs/base.yaml,line=11::API removed" ;;
             open) echo "https://www.oasdiff.com/review/e/stub-id#k=stub-key" >&2 ;;
             *) echo "1 changes: 1 error, 0 warning, 0 info" ;;
@@ -605,7 +603,7 @@ jobs:
 
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"abc123def456"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo "$1" > /tmp/run/open-command
@@ -659,8 +657,8 @@ jobs:
           for expected in \
             '1 breaking change in this pull request' \
             'status check on this pull request shows whether they are all approved' \
-            '| severity | change | endpoint |' \
-            'api-removed-without-deprecation' \
+            '| severity | change | endpoint | diff |' \
+            '| error | API removed | <code>GET /pets</code> | [view](https://www.oasdiff.com/review/ep/test-token-uuid?highlight=abc123def456#k=test-key) |' \
             'Review and approve the changes'
           do
             case "$pro_body" in
@@ -696,7 +694,7 @@ jobs:
           #!/bin/sh
           for a in "$@"; do
             case "$a" in
-              json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0 ;;
+              json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"abc123def456"}]'; exit 0 ;;
               githubactions) echo "::error file=specs/base.yaml,line=11::API removed"; exit 0 ;;
               --open)
                 echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
