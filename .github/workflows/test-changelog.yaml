@@ -286,7 +286,7 @@ jobs:
           case "${fmt:-text}" in
             json)
               printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}'
-              printf ',{"id":"response-property-became-optional","text":"became optional","level":1,"operation":"POST","path":"/pets","section":"paths"}'
+              printf ',{"id":"response-property-became-optional","text":"added @octocat [l](https://e.example) <b>","level":1,"operation":"POST","path":"/pets","section":"paths"}'
               i=3
               while [ "$i" -le 6 ]; do
                 printf ',{"id":"request-property-added","text":"added","level":1,"operation":"PUT","path":"/pets%s","section":"paths"}' "$i"
@@ -349,6 +349,15 @@ jobs:
               *) echo "FAIL: the comment is missing: $expected" >&2; exit 1 ;;
             esac
           done
+          # Spec text is attacker-controlled on a pull request: it must reach
+          # the comment inert, with no live mention, link or HTML.
+          case "$body" in
+            *'@octocat'*|*'[l]('*|*'<b>'*) echo "FAIL: spec text reached the comment as live markdown" >&2; exit 1 ;;
+          esac
+          case "$body" in
+            *'&#64;octocat'*) ;;
+            *) echo "FAIL: the mention was dropped instead of neutralized" >&2; exit 1 ;;
+          esac
           # Severest first, so the row that decides whether the pull request
           # can merge is never the one that collapses.
           first_row=$(printf '%s' "$body" | grep -m1 '^| \(error\|warning\|info\) ')

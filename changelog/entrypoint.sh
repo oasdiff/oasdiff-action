@@ -73,9 +73,18 @@ review_comment_changes () {
         def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
         def endpoint:
             if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
-        def cell: (.text // "") | gsub("\n"; " ") | gsub("\\|"; "\\\\|");
-        def row: "| " + (.level | severity) + " | " + cell
-            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | `" + endpoint + "` |";
+        # Property names and paths come from the spec, which the author of a
+        # pull request controls, so nothing in them may act as markdown: no
+        # mention, link, image, or break out of the table. Every character
+        # markdown reads becomes an entity, which GitHub prints literally.
+        def inert:
+            gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")
+            | gsub("@"; "&#64;") | gsub("\\["; "&#91;") | gsub("\\]"; "&#93;")
+            | gsub("`"; "&#96;") | gsub("\\|"; "&#124;") | gsub("\\*"; "&#42;")
+            | gsub("_"; "&#95;") | gsub("://"; ":&#47;&#47;") | gsub("www\\."; "www&#46;")
+            | gsub("[\r\n]+"; " ");
+        def row: "| " + (.level | severity) + " | " + ((.text // "") | inert)
+            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | <code>" + (endpoint | inert) + "</code> |";
         def header: "| severity | change | endpoint |", "| --- | --- | --- |";
         sort_by([-.level, (.path // ""), (.operation // ""), .id]) as $all
         | ($all | length) as $total
