@@ -239,7 +239,7 @@ jobs:
           echo "$pro_body"
           for expected in \
             '1 API change in this pull request' \
-            'Review required' \
+            'status check on this pull request shows whether they are all approved' \
             '| severity | change | endpoint |' \
             'api-removed-without-deprecation' \
             'Review and approve the changes'
