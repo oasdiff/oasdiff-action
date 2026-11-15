@@ -190,12 +190,21 @@ jobs:
           STUB
           chmod +x /tmp/stub/oasdiff
 
-          # The POST calls carry -w %{http_code}; return a 2xx. The comment-list
-          # GET has no such flag; return an empty JSON array so jq finds no
-          # existing comment and the entrypoint POSTs a new one.
+          # The POST calls carry -w %{http_code}; return a 2xx, keeping the
+          # comment body so the assertions can read it. The comment-list GET has
+          # no such flag; return an empty JSON array so jq finds no existing
+          # comment and the entrypoint POSTs a new one.
           cat > /tmp/stub/curl <<'STUB'
           #!/bin/sh
-          for a in "$@"; do case "$a" in *"%{http_code}"*) echo "201"; exit 0 ;; esac; done
+          for a in "$@"; do
+            case "$a" in *"%{http_code}"*) http_code=1 ;; esac
+            case "$a" in *"/issues/"*) comment=1 ;; esac
+          done
+          if [ -n "${http_code:-}" ]; then
+            if [ -n "${comment:-}" ]; then cat > /tmp/run/pro-comment.json; else cat > /dev/null; fi
+            echo "201"
+            exit 0
+          fi
           echo "[]"
           STUB
           chmod +x /tmp/stub/curl
@@ -220,6 +229,26 @@ jobs:
           echo "--- step summary ---"; cat "$GITHUB_STEP_SUMMARY"
 
           if [ "$rc" -ne 0 ]; then echo "FAIL: expected exit 0, got $rc" >&2; exit 1; fi
+          # The paid comment must carry at least what the free one does: the
+          # changes themselves, plus the gate state only Pro has.
+          if [ ! -f /tmp/run/pro-comment.json ]; then
+            echo "FAIL: the Pro comment body was never posted" >&2; exit 1
+          fi
+          pro_body=$(jq -r '.body' < /tmp/run/pro-comment.json)
+          echo "--- Pro comment body ---"
+          echo "$pro_body"
+          for expected in \
+            '1 API change in this pull request' \
+            'Review required' \
+            '| severity | change | endpoint |' \
+            'api-removed-without-deprecation' \
+            'Review and approve the changes'
+          do
+            case "$pro_body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the Pro comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
           if ! echo "$out" | grep -q "oasdiff: posted the Pro review comment."; then
             echo "FAIL: Pro review comment not posted" >&2; exit 1
           fi

@@ -272,10 +272,19 @@ pro_comment () {
         "${api}/repos/${owner}/${repo}/issues/${pr_number}/comments?per_page=100" 2>/dev/null \
         | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
 
+    if [ "${change_count:-0}" -eq 1 ]; then
+        heading="1 API change in this pull request"
+    else
+        heading="${change_count:-0} API changes in this pull request"
+    fi
     body="${marker}
-### 📋 [Review and approve the API changes](${review_url})
+### 📋 ${heading}
 
 ${status_line}
+
+$(review_comment_changes "${changes_json:-}")
+
+[Review and approve the changes](${review_url})
 
 🔒 The comparison is encrypted in CI before it's uploaded. The decryption key stays in this link's fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs.
 
