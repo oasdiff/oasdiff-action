@@ -71,6 +71,14 @@ inputs:
     description: 'oasdiff Pro tenant token (the OASDIFF_TOKEN secret). When set, the action uploads an authenticated review and posts a review comment + an `oasdiff` commit status gate. Requires `permissions: pull-requests: write` and `statuses: write`.'
     required: false
     default: ''
+  fail-on:
+    description: 'Fail with exit code 1 when a change has this severity or higher (ERR, WARN or INFO), or with MISSING-VERSION-BUMP when breaking changes have no major version increase in info.version. Empty never fails.'
+    required: false
+    default: ''
+  config:
+    description: 'Path to an oasdiff config file, for a repository that does not keep .oasdiff.yaml at its root'
+    required: false
+    default: ''
 outputs:
   changelog:
     description: 'Output summary of API changelog'

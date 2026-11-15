@@ -559,3 +559,119 @@ jobs:
             exit 1
           fi
           echo "PASS"
+
+  oasdiff_breaking_config_input:
+    runs-on: ubuntu-latest
+    name: Test breaking action reads the config file the config input names
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Put a config file somewhere other than the repo root
+        run: |
+          mkdir -p ci
+          cat > ci/oasdiff.yaml <<EOF
+          fail-on: ERR
+          EOF
+      - name: Running breaking action with the config input and no fail-on input
+        id: test_config_input
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          config: 'ci/oasdiff.yaml'
+          review: false
+      - name: Assert the fail-on in that file failed the step
+        run: |
+          if [ "${{ steps.test_config_input.outcome }}" != "failure" ]; then
+            echo "Expected the step to fail: ci/oasdiff.yaml sets fail-on: ERR and the spec has an ERR-level change. Got: ${{ steps.test_config_input.outcome }}" >&2
+            exit 1
+          fi
+
+  oasdiff_breaking_pro_posts_comment_and_status:
+    runs-on: ubuntu-latest
+    name: Test breaking Pro path posts the review comment and sets the gate
+    # With an oasdiff-token the breaking action is the Pro action: it uploads
+    # an authenticated review of the breaking changes, posts the review
+    # comment and sets the oasdiff commit status. Stubs oasdiff (one change in
+    # the json render; --open prints a /review/ep URL and a pending status)
+    # and curl (keeps the comment body).
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + curl (Pro success), run entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
+          for a in "$@"; do
+            if [ "$a" = "--open" ]; then
+              echo "$1" > /tmp/run/open-command
+              echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
+              echo "oasdiff: review status: pending" >&2
+              exit 0
+            fi
+          done
+          echo "1 changes: 1 error, 0 warning, 0 info"
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in *"%{http_code}"*) http_code=1 ;; esac
+            case "$a" in *"/issues/"*) comment=1 ;; esac
+            case "$a" in *"/statuses/"*) status=1 ;; esac
+          done
+          if [ -n "${http_code:-}" ]; then
+            if [ -n "${comment:-}" ]; then cat > /tmp/run/pro-comment.json
+            elif [ -n "${status:-}" ]; then cat > /tmp/run/status.json
+            else cat > /dev/null; fi
+            echo "201"
+            exit 0
+          fi
+          echo "[]"
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=acme/widgets
+          export GITHUB_SHA=deadbeef
+          export GITHUB_OUTPUT=/tmp/run/out; : > "$GITHUB_OUTPUT"
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary; : > "$GITHUB_STEP_SUMMARY"
+          cat > /tmp/run/event.json <<EVT
+          {"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}
+          EVT
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          export PATH=/tmp/stub:$PATH
+
+          out=$(env OASDIFF_ACTION_COMMAND=breaking INPUT_BASE=b INPUT_REVISION=r \
+            'INPUT_GITHUB-TOKEN=gh-token' 'INPUT_OASDIFF-TOKEN=oasdiff-token' bash ./breaking/entrypoint.sh 2>&1)
+          echo "--- output ---"; echo "$out"
+
+          if [ "$(cat /tmp/run/open-command)" != "breaking" ]; then
+            echo "FAIL: the Pro review was not uploaded by 'oasdiff breaking'" >&2; exit 1
+          fi
+          pro_body=$(jq -r '.body' < /tmp/run/pro-comment.json)
+          echo "--- Pro comment body ---"; echo "$pro_body"
+          for expected in \
+            '1 breaking change in this pull request' \
+            'Review required' \
+            '| severity | change | endpoint |' \
+            'api-removed-without-deprecation' \
+            'Review and approve the changes'
+          do
+            case "$pro_body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the Pro comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
+          if [ "$(jq -r '.state' < /tmp/run/status.json)" != "pending" ]; then
+            echo "FAIL: the oasdiff commit status was not set to pending" >&2; exit 1
+          fi
+          if ! grep -q "review/ep/test-token-uuid" "$GITHUB_STEP_SUMMARY"; then
+            echo "FAIL: review URL not in step summary" >&2; exit 1
+          fi
+          echo "PASS"

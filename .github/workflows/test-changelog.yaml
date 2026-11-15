@@ -373,3 +373,57 @@ jobs:
             exit 1
           fi
           echo "PASS"
+
+  oasdiff_changelog_fail_on:
+    runs-on: ubuntu-latest
+    name: Test changelog action fails the job on fail-on
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Running changelog action with fail-on
+        id: test_fail_on
+        continue-on-error: true
+        uses: ./changelog
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          fail-on: ERR
+          review: false
+      - name: Assert the step failed and still produced the changelog
+        env:
+          ACTUAL_OUTPUT: ${{ steps.test_fail_on.outputs.changelog }}
+        run: |
+          if [ "${{ steps.test_fail_on.outcome }}" != "failure" ]; then
+            echo "Expected the step to fail on fail-on: ERR. Got: ${{ steps.test_fail_on.outcome }}" >&2
+            exit 1
+          fi
+          case "$ACTUAL_OUTPUT" in
+            *" changes: "*) ;;
+            *) echo "Expected the changelog output alongside the failure, got: '$ACTUAL_OUTPUT'" >&2; exit 1 ;;
+          esac
+
+  oasdiff_changelog_yaml_config_fail_on:
+    runs-on: ubuntu-latest
+    name: Test changelog action picks up fail-on from .oasdiff.yaml
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: Drop .oasdiff.yaml at repo root
+        run: |
+          cat > .oasdiff.yaml <<EOF
+          fail-on: ERR
+          EOF
+      - name: Running changelog action without a fail-on input
+        id: test_yaml_fail_on
+        continue-on-error: true
+        uses: ./changelog
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          review: false
+      - name: Assert the fail-on in the file failed the step
+        run: |
+          if [ "${{ steps.test_yaml_fail_on.outcome }}" != "failure" ]; then
+            echo "Expected the step to fail: .oasdiff.yaml sets fail-on: ERR. Got: ${{ steps.test_yaml_fail_on.outcome }}" >&2
+            exit 1
+          fi
