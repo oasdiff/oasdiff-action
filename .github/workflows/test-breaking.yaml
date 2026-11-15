@@ -416,8 +416,13 @@ jobs:
           # jq stays the system jq; only oasdiff and curl are stubbed.
           export PATH=/tmp/stub:$PATH
 
-          ./breaking/entrypoint.sh 'specs/base.yaml' 'specs/revision-breaking.yaml' \
-            '' '' 'false' '' '' '' '' 'false' 'false' '' '' '' 'false' 'true' 'fake-token'
+          # bash, not the script's own sh: on the runner that is dash, which drops
+          # environment variables whose names have a hyphen (INPUT_GITHUB-TOKEN).
+          # The action's container runs busybox ash, which keeps them.
+          env OASDIFF_ACTION_COMMAND=breaking \
+            INPUT_BASE=specs/base.yaml INPUT_REVISION=specs/revision-breaking.yaml \
+            INPUT_COMPOSED=false 'INPUT_ALLOW-EXTERNAL-REFS=false' INPUT_REVIEW=true \
+            'INPUT_GITHUB-TOKEN=fake-token' bash ./breaking/entrypoint.sh
 
           if [ ! -f /tmp/run/comment.json ]; then
             echo "FAIL: no comment was posted" >&2
@@ -514,8 +519,10 @@ jobs:
           export PATH=/tmp/stub:$PATH
 
           run_entrypoint () {
-            ./breaking/entrypoint.sh 'specs/base.yaml' 'specs/revision-breaking.yaml' \
-              '' '' 'false' '' '' '' '' 'false' 'false' '' '' '' 'false' 'true' 'fake-token'
+            env OASDIFF_ACTION_COMMAND=breaking \
+              INPUT_BASE=specs/base.yaml INPUT_REVISION=specs/revision-breaking.yaml \
+              INPUT_COMPOSED=false 'INPUT_ALLOW-EXTERNAL-REFS=false' INPUT_REVIEW=true \
+              'INPUT_GITHUB-TOKEN=fake-token' bash ./breaking/entrypoint.sh
           }
 
           echo "=== same-repo pull request: expect a warning naming the permission"

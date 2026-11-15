@@ -134,8 +134,8 @@ jobs:
 
           export PATH=/tmp/stub:$PATH
           set +e
-          out=$(./changelog/entrypoint.sh \
-            'b' 'r' '' '' '' '' '' '' '' '' '' '' '' '' '' '' '' 'stub-oasdiff-token' 2>&1)
+          out=$(env OASDIFF_ACTION_COMMAND=changelog INPUT_BASE=b INPUT_REVISION=r \
+            'INPUT_OASDIFF-TOKEN=stub-oasdiff-token' bash ./breaking/entrypoint.sh 2>&1)
           rc=$?
           set -e
           echo "--- entrypoint output ---"; echo "$out"
@@ -221,8 +221,8 @@ jobs:
 
           export PATH=/tmp/stub:$PATH
           set +e
-          out=$(./changelog/entrypoint.sh \
-            'b' 'r' '' '' '' '' '' '' '' '' '' '' '' '' '' '' 'gh-token' 'oasdiff-token' 2>&1)
+          out=$(env OASDIFF_ACTION_COMMAND=changelog INPUT_BASE=b INPUT_REVISION=r \
+            'INPUT_GITHUB-TOKEN=gh-token' 'INPUT_OASDIFF-TOKEN=oasdiff-token' bash ./breaking/entrypoint.sh 2>&1)
           rc=$?
           set -e
           echo "--- output ---"; echo "$out"
@@ -325,8 +325,10 @@ jobs:
           export GITHUB_EVENT_PATH=/tmp/run/event.json
           export PATH=/tmp/stub:$PATH
 
-          ./changelog/entrypoint.sh 'specs/base.yaml' 'specs/revision.yaml' \
-            'false' '' '' 'false' 'false' '' '' '' 'false' '' '' '' 'false' 'true' 'fake-token' ''
+          env OASDIFF_ACTION_COMMAND=changelog \
+            INPUT_BASE=specs/base.yaml INPUT_REVISION=specs/revision.yaml \
+            INPUT_COMPOSED=false 'INPUT_ALLOW-EXTERNAL-REFS=false' INPUT_REVIEW=true \
+            'INPUT_GITHUB-TOKEN=fake-token' bash ./breaking/entrypoint.sh
 
           if [ ! -f /tmp/run/comment.json ]; then
             echo "FAIL: no comment was posted" >&2

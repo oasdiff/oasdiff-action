@@ -78,24 +78,6 @@ outputs:
     description: 'URL of the free oasdiff review page for these changes (empty when there are no changes)'
 runs:
   using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.base }}
-    - ${{ inputs.revision }}
-    - ${{ inputs.include-path-params }}
-    - ${{ inputs.exclude-elements }}
-    - ${{ inputs.filter-extension }}
-    - ${{ inputs.composed }}
-    - ${{ inputs.flatten-allof }}
-    - ${{ inputs.output-to-file }}
-    - ${{ inputs.prefix-base }}
-    - ${{ inputs.prefix-revision }}
-    - ${{ inputs.case-insensitive-headers }}
-    - ${{ inputs.format }}
-    - ${{ inputs.template }}
-    - ${{ inputs.level }}
-    - ${{ inputs.allow-external-refs }}
-    - ${{ inputs.review }}
-    - ${{ inputs.github-token }}
-    - ${{ inputs.oasdiff-token }}
-
+  image: '../breaking/Dockerfile'
+  env:
+    OASDIFF_ACTION_COMMAND: changelog

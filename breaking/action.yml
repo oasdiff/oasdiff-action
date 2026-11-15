@@ -72,21 +72,5 @@ outputs:
 runs:
   using: 'docker'
   image: 'Dockerfile'
-  args:
-    - ${{ inputs.base }}
-    - ${{ inputs.revision }}
-    - ${{ inputs.fail-on }}
-    - ${{ inputs.include-checks }}
-    - ${{ inputs.include-path-params }}
-    - ${{ inputs.deprecation-days-beta }}
-    - ${{ inputs.deprecation-days-stable }}
-    - ${{ inputs.exclude-elements }}
-    - ${{ inputs.filter-extension }}
-    - ${{ inputs.composed }}
-    - ${{ inputs.flatten-allof }}
-    - ${{ inputs.err-ignore }}
-    - ${{ inputs.warn-ignore }}
-    - ${{ inputs.output-to-file }}
-    - ${{ inputs.allow-external-refs }}
-    - ${{ inputs.review }}
-    - ${{ inputs.github-token }}
+  env:
+    OASDIFF_ACTION_COMMAND: breaking
