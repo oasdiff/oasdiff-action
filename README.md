@@ -294,6 +294,8 @@ jobs:
 
 The only difference from the free [breaking workflow](#check-for-breaking-changes) is the `oasdiff-token` secret and the `statuses: write` permission. Your specs are still encrypted in CI before upload, so the server can't read them. With `breaking`, the changes to approve are the breaking ones; use `changelog` with the same token to put every change up for review.
 
+If your workflow sets `fail-on`, keep it. The job fails until every breaking change is approved, and passes on the next run after that, so a job that is a required check keeps blocking the merge. For a gate that clears the moment a change is approved, make the `oasdiff` status check the required one: with the GitHub App installed it updates without a new run. `fail-on: MISSING-VERSION-BUMP` is not cleared by approval.
+
 Both actions are documented above; the one added input is:
 
 | Input | Default | Description | Accepted values |
