@@ -18,6 +18,7 @@ GitHub Actions that check your OpenAPI specs for breaking changes on every pull 
   - [Generate a diff report](#generate-a-diff-report)
   - [Validate a single spec](#validate-a-single-spec)
 - [Configuring with `.oasdiff.yaml`](#configuring-with-oasdiffyaml)
+- [Pull requests from forks](#pull-requests-from-forks)
 - [Spec paths](#spec-paths)
 - [Pro: Approve and gate changes](#pro-approve-and-gate-changes)
 
@@ -66,7 +67,7 @@ The examples here pin the action at `@v0`, the moving major-version tag. It alwa
 
 ## Free actions
 
-The following actions run the oasdiff CLI directly in your GitHub runner — no account or token required.
+The following actions run the oasdiff CLI directly in your GitHub runner. No account or token is required.
 
 ### Check for breaking changes
 
@@ -117,7 +118,7 @@ jobs:
 
 ### Generate a changelog
 
-Outputs the changes that can affect API consumers (breaking and non-breaking) between two specs, and writes inline annotations on the pull request's Files changed tab for the ones at error and warning level. Documentation-only edits, such as descriptions and examples, are not included; use the [diff action](#generate-a-diff-report) to see every difference in the API definition. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
+The `breaking` action, reporting every change that can affect API consumers instead of only the breaking ones. It takes the same inputs for the run, including `fail-on` and, for Pro, `oasdiff-token`. Outputs the changes (breaking and non-breaking) between two specs, and writes inline annotations on the pull request's Files changed tab for the ones at error and warning level. Documentation-only edits, such as descriptions and examples, are not included; use the [diff action](#generate-a-diff-report) to see every difference in the API definition. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
 
 ```yaml
 name: oasdiff
@@ -228,7 +229,9 @@ For a non-blocking, report-only run, leave `fail-on` and set `continue-on-error:
 
 ## Configuring with `.oasdiff.yaml`
 
-All four actions (`breaking`, `changelog`, `diff`, `pr-comment`) automatically pick up a `.oasdiff.yaml` file from the root of your checked-out repository. This lets you keep CLI-flag-shaped configuration in source control instead of repeating the same `with:` block in every workflow file.
+Action inputs cover what a run needs: which specs to compare, the tokens, and whether to fail the job. Everything about how oasdiff judges the API (ignore files, severity levels, exclusions, deprecation windows) goes in `.oasdiff.yaml`, where every oasdiff flag works and the same file gives you the same answer when you run oasdiff locally.
+
+The `breaking`, `changelog` and `diff` actions automatically pick up a `.oasdiff.yaml` file from the root of your checked-out repository. This lets you keep CLI-flag-shaped configuration in source control instead of repeating the same `with:` block in every workflow file.
 
 Drop a `.oasdiff.yaml` next to your spec:
 
@@ -247,8 +250,8 @@ severity-levels: ./oasdiff-levels.txt
 
 ```
 # oasdiff-levels.txt
-api-version-not-bumped          err
-api-major-version-not-bumped    err
+response-non-success-status-removed    err
+api-tag-removed                        none
 ```
 
 The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions/checkout` populates), so no extra steps are needed.
@@ -257,20 +260,27 @@ The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions
 
 **Legacy filename**: the older `oasdiff.yaml` (without the leading dot) still works as a back-compat fallback. New projects should prefer `.oasdiff.yaml` to match the dotfile convention used by `.eslintrc`, `.golangci.yml`, and similar tools.
 
-**Explicit path**: if your config lives somewhere else, set `OASDIFF_CONFIG` in the workflow `env:` to point at it:
+**Explicit path**: if your config lives somewhere else, point the `config` input at it (`breaking` and `changelog`; for `diff`, set `OASDIFF_CONFIG` in the step's `env:`):
 
 ```yaml
 - uses: oasdiff/oasdiff-action/breaking@v0
-  env:
-    OASDIFF_CONFIG: ./config/oasdiff.yaml
   with:
     base: 'origin/${{ github.base_ref }}:openapi.yaml'
     revision: 'HEAD:openapi.yaml'
+    config: ./config/oasdiff.yaml
 ```
 
 For the full list of supported keys and how relative paths inside the config file are resolved, see the [oasdiff configuration-file reference](https://github.com/oasdiff/oasdiff/blob/main/docs/CONFIG-FILES.md).
 
 Available since action `v0.0.47` (which ships oasdiff `v1.15.3`).
+
+---
+
+## Pull requests from forks
+
+GitHub gives a pull request from a fork a read-only token and no secrets. The actions still run, annotate and fail the job as configured; the link to the review goes to the job summary instead of a comment, and the log says so. Pro reviews on fork pull requests need the [oasdiff GitHub App](https://github.com/apps/oasdiff/installations/new).
+
+Do not switch the workflow to `pull_request_target` to get a comment or a Pro review on fork pull requests. That event runs with your repository's secrets against a spec the fork's author wrote.
 
 ---
 
