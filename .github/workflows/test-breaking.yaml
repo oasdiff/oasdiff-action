@@ -348,3 +348,207 @@ jobs:
               exit 1
               ;;
           esac
+
+  oasdiff_breaking_comment_lists_the_changes:
+    runs-on: ubuntu-latest
+    name: Test the PR comment lists the changes
+    # The comment is what a reviewer reads on the pull request, so it carries
+    # the changes themselves, capped so a large changelog cannot exceed
+    # GitHub's 65,536-character comment limit. Stubs oasdiff (a 7-change json
+    # render) and curl (captures the comment body), so the assertions read the
+    # exact body the action would post.
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + curl and run the entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) fmt=json ;;
+              githubactions) fmt=gha ;;
+              --open) fmt=open ;;
+            esac
+          done
+          case "${fmt:-text}" in
+            json)
+              printf '['
+              i=1
+              while [ "$i" -le 7 ]; do
+                [ "$i" -gt 1 ] && printf ','
+                printf '{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets%s","section":"paths"}' "$i"
+                i=$((i+1))
+              done
+              printf ']'
+              ;;
+            gha) echo "::error file=specs/base.yaml,line=11::API removed" ;;
+            open) echo "https://www.oasdiff.com/review/e/stub-id#k=stub-key" >&2 ;;
+            *) echo "7 changes: 7 error, 0 warning, 0 info" ;;
+          esac
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$prev" in -X) method=$a ;; esac
+            prev=$a
+          done
+          case " $* " in
+            *api/telemetry*) cat > /tmp/run/telemetry.json; exit 0 ;;
+          esac
+          if [ "${method:-GET}" = GET ]; then echo '[]'; exit 0; fi
+          cat > /tmp/run/comment.json
+          printf '201'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/7/merge
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_OUTPUT=/tmp/run/output
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          export GITHUB_ACTION_REF=v0
+          printf '{"pull_request":{"head":{"repo":{"full_name":"acme/api"}}}}' > /tmp/run/event.json
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          # jq stays the system jq; only oasdiff and curl are stubbed.
+          export PATH=/tmp/stub:$PATH
+
+          ./breaking/entrypoint.sh 'specs/base.yaml' 'specs/revision-breaking.yaml' \
+            '' '' 'false' '' '' '' '' 'false' 'false' '' '' '' 'false' 'true' 'fake-token'
+
+          if [ ! -f /tmp/run/comment.json ]; then
+            echo "FAIL: no comment was posted" >&2
+            exit 1
+          fi
+          body=$(jq -r '.body' < /tmp/run/comment.json)
+          echo "--- comment body ---"
+          echo "$body"
+          for expected in \
+            '7 breaking changes in this pull request' \
+            '| severity | change | endpoint |' \
+            'API removed [' \
+            'https://www.oasdiff.com/checks/api-removed-without-deprecation' \
+            'GET /pets5' \
+            '<details><summary>2 more</summary>' \
+            'GET /pets6' \
+            'oasdiff Pro'
+          do
+            case "$body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
+          # Five rows stay open and the rest collapse, so the 6th change is
+          # listed but only inside the details block.
+          open_rows=$(printf '%s' "$body" | sed -n '1,/<details>/p' | grep -c '^| error ')
+          if [ "$open_rows" -ne 5 ]; then
+            echo "FAIL: expected 5 rows above the collapsed block, got $open_rows" >&2
+            exit 1
+          fi
+          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
+          if [ "$mode" != "comment" ]; then
+            echo "FAIL: expected delivery mode 'comment', got '$mode'" >&2
+            exit 1
+          fi
+          echo "PASS"
+
+  oasdiff_breaking_comment_failure_names_the_fix:
+    runs-on: ubuntu-latest
+    name: Test a blocked PR comment says what to change
+    # A comment that cannot post is reported two different ways, because only
+    # one of them is actionable: a job without pull-requests:write gets a
+    # warning naming the permission, while a pull request from a fork gets a
+    # plain line, since GitHub makes the token read-only there whatever the
+    # job does. Both cases are also reported separately in the delivery mode.
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + a rejecting curl, run with and without a fork event
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) fmt=json ;;
+              githubactions) fmt=gha ;;
+              --open) fmt=open ;;
+            esac
+          done
+          case "${fmt:-text}" in
+            json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]' ;;
+            gha) echo "::error file=specs/base.yaml,line=11::API removed" ;;
+            open) echo "https://www.oasdiff.com/review/e/stub-id#k=stub-key" >&2 ;;
+            *) echo "1 changes: 1 error, 0 warning, 0 info" ;;
+          esac
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          # Rejects the comment with 403, the shape GitHub returns both for a
+          # missing permission and for a fork's read-only token.
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$prev" in -X) method=$a ;; esac
+            prev=$a
+          done
+          case " $* " in
+            *api/telemetry*) cat > /tmp/run/telemetry.json; exit 0 ;;
+          esac
+          if [ "${method:-GET}" = GET ]; then echo '[]'; exit 0; fi
+          cat > /dev/null
+          printf '403'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/7/merge
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_OUTPUT=/tmp/run/output
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          export GITHUB_ACTION_REF=v0
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          export PATH=/tmp/stub:$PATH
+
+          run_entrypoint () {
+            ./breaking/entrypoint.sh 'specs/base.yaml' 'specs/revision-breaking.yaml' \
+              '' '' 'false' '' '' '' '' 'false' 'false' '' '' '' 'false' 'true' 'fake-token'
+          }
+
+          echo "=== same-repo pull request: expect a warning naming the permission"
+          printf '{"pull_request":{"head":{"repo":{"full_name":"acme/api"}}}}' > /tmp/run/event.json
+          out=$(run_entrypoint 2>&1)
+          echo "$out" | grep -v '^flags:\|^running oasdiff'
+          case "$out" in
+            *"::warning::oasdiff: couldn't post the review link"*"pull-requests: write"*) ;;
+            *) echo "FAIL: no warning naming the permission" >&2; exit 1 ;;
+          esac
+          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
+          if [ "$mode" != "comment_failed" ]; then
+            echo "FAIL: expected delivery mode 'comment_failed', got '$mode'" >&2
+            exit 1
+          fi
+
+          echo "=== fork pull request: expect a plain line and no warning"
+          printf '{"pull_request":{"head":{"repo":{"full_name":"contrib/api-fork"}}}}' > /tmp/run/event.json
+          out=$(run_entrypoint 2>&1)
+          echo "$out" | grep -v '^flags:\|^running oasdiff'
+          case "$out" in
+            *"comes from a fork"*) ;;
+            *) echo "FAIL: a fork pull request was not reported as one" >&2; exit 1 ;;
+          esac
+          case "$out" in
+            *"::warning::oasdiff: couldn't post the review link"*)
+              echo "FAIL: a fork pull request must not warn about a permission it cannot have" >&2
+              exit 1
+              ;;
+          esac
+          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
+          if [ "$mode" != "comment_fork" ]; then
+            echo "FAIL: expected delivery mode 'comment_fork', got '$mode'" >&2
+            exit 1
+          fi
+          echo "PASS"

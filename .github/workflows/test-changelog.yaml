@@ -105,12 +105,13 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/stub /tmp/run
 
-          # The entrypoint invokes oasdiff three times: the changes probe
-          # (--fail-on=INFO -> exit 1 means changes exist), the user-facing
-          # render, and the authenticated --open upload. Branch on the args.
+          # The entrypoint invokes oasdiff three times: the json render (its
+          # length says whether there are changes, and feeds the PR comment),
+          # the user-facing render, and the authenticated --open upload. Branch
+          # on the args.
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "--fail-on=INFO" ] && exit 1; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo 'Error: upload failed (HTTP 402): {"code":"subscription_expired","message":"Your oasdiff trial or subscription has expired. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro.","upgrade_url":"https://www.oasdiff.com/pricing"}' >&2
@@ -162,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test changelog Pro path posts the review comment and sets the gate
     # Companion to changelog_pro_expired_trial_warns_without_failing: the success
-    # path. Stubs oasdiff (changes present; --open prints a /review/ep URL +
+    # path. Stubs oasdiff (one change in the json render; --open prints a /review/ep URL +
     # "review status: pending") and curl (GitHub API: empty comment list, then
     # 2xx for the comment + status POSTs). Asserts the Pro review comment is
     # posted, the oasdiff commit status is set, and the review URL reaches the
@@ -177,7 +178,7 @@ jobs:
 
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "--fail-on=INFO" ] && exit 1; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
@@ -189,12 +190,21 @@ jobs:
           STUB
           chmod +x /tmp/stub/oasdiff
 
-          # The POST calls carry -w %{http_code}; return a 2xx. The comment-list
-          # GET has no such flag; return an empty JSON array so jq finds no
-          # existing comment and the entrypoint POSTs a new one.
+          # The POST calls carry -w %{http_code}; return a 2xx, keeping the
+          # comment body so the assertions can read it. The comment-list GET has
+          # no such flag; return an empty JSON array so jq finds no existing
+          # comment and the entrypoint POSTs a new one.
           cat > /tmp/stub/curl <<'STUB'
           #!/bin/sh
-          for a in "$@"; do case "$a" in *"%{http_code}"*) echo "201"; exit 0 ;; esac; done
+          for a in "$@"; do
+            case "$a" in *"%{http_code}"*) http_code=1 ;; esac
+            case "$a" in *"/issues/"*) comment=1 ;; esac
+          done
+          if [ -n "${http_code:-}" ]; then
+            if [ -n "${comment:-}" ]; then cat > /tmp/run/pro-comment.json; else cat > /dev/null; fi
+            echo "201"
+            exit 0
+          fi
           echo "[]"
           STUB
           chmod +x /tmp/stub/curl
@@ -219,6 +229,26 @@ jobs:
           echo "--- step summary ---"; cat "$GITHUB_STEP_SUMMARY"
 
           if [ "$rc" -ne 0 ]; then echo "FAIL: expected exit 0, got $rc" >&2; exit 1; fi
+          # The paid comment must carry at least what the free one does: the
+          # changes themselves, plus the gate state only Pro has.
+          if [ ! -f /tmp/run/pro-comment.json ]; then
+            echo "FAIL: the Pro comment body was never posted" >&2; exit 1
+          fi
+          pro_body=$(jq -r '.body' < /tmp/run/pro-comment.json)
+          echo "--- Pro comment body ---"
+          echo "$pro_body"
+          for expected in \
+            '1 API change in this pull request' \
+            'Review required' \
+            '| severity | change | endpoint |' \
+            'api-removed-without-deprecation' \
+            'Review and approve the changes'
+          do
+            case "$pro_body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the Pro comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
           if ! echo "$out" | grep -q "oasdiff: posted the Pro review comment."; then
             echo "FAIL: Pro review comment not posted" >&2; exit 1
           fi
@@ -227,5 +257,117 @@ jobs:
           fi
           if ! grep -q 'review/ep/test-token-uuid' "$GITHUB_STEP_SUMMARY"; then
             echo "FAIL: review URL not in step summary" >&2; exit 1
+          fi
+          echo "PASS"
+
+  oasdiff_changelog_comment_lists_the_changes:
+    runs-on: ubuntu-latest
+    name: Test the PR comment lists the changes
+    # Sibling of the breaking action's job of the same name: the two
+    # entrypoints build the same comment, so a change to one that misses the
+    # other fails here. Stubs oasdiff (a 6-change json render) and curl
+    # (captures the comment body).
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + curl and run the entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) fmt=json ;;
+              githubactions) fmt=gha ;;
+              --open) fmt=open ;;
+            esac
+          done
+          case "${fmt:-text}" in
+            json)
+              printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}'
+              printf ',{"id":"response-property-became-optional","text":"added @octocat [l](https://e.example) <b>","level":1,"operation":"POST","path":"/pets","section":"paths"}'
+              i=3
+              while [ "$i" -le 6 ]; do
+                printf ',{"id":"request-property-added","text":"added","level":1,"operation":"PUT","path":"/pets%s","section":"paths"}' "$i"
+                i=$((i+1))
+              done
+              printf ']'
+              ;;
+            gha) echo "::error file=specs/base.yaml,line=11::API removed" ;;
+            open) echo "https://www.oasdiff.com/review/e/stub-id#k=stub-key" >&2 ;;
+            *) echo "6 changes: 1 error, 0 warning, 5 info" ;;
+          esac
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$prev" in -X) method=$a ;; esac
+            prev=$a
+          done
+          case " $* " in
+            *api/telemetry*) cat > /tmp/run/telemetry.json; exit 0 ;;
+          esac
+          if [ "${method:-GET}" = GET ]; then echo '[]'; exit 0; fi
+          cat > /tmp/run/comment.json
+          printf '201'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/7/merge
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_OUTPUT=/tmp/run/output
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          export GITHUB_ACTION_REF=v0
+          printf '{"pull_request":{"head":{"repo":{"full_name":"acme/api"}}}}' > /tmp/run/event.json
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          export PATH=/tmp/stub:$PATH
+
+          ./changelog/entrypoint.sh 'specs/base.yaml' 'specs/revision.yaml' \
+            'false' '' '' 'false' 'false' '' '' '' 'false' '' '' '' 'false' 'true' 'fake-token' ''
+
+          if [ ! -f /tmp/run/comment.json ]; then
+            echo "FAIL: no comment was posted" >&2
+            exit 1
+          fi
+          body=$(jq -r '.body' < /tmp/run/comment.json)
+          echo "--- comment body ---"
+          echo "$body"
+          for expected in \
+            '6 API changes in this pull request' \
+            'api-removed-without-deprecation' \
+            'response-property-became-optional' \
+            '| error | ' \
+            '| info | ' \
+            '<details><summary>1 more</summary>' \
+            'oasdiff Pro'
+          do
+            case "$body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
+          # Spec text is attacker-controlled on a pull request: it must reach
+          # the comment inert, with no live mention, link or HTML.
+          case "$body" in
+            *'@octocat'*|*'[l]('*|*'<b>'*) echo "FAIL: spec text reached the comment as live markdown" >&2; exit 1 ;;
+          esac
+          case "$body" in
+            *'&#64;octocat'*) ;;
+            *) echo "FAIL: the mention was dropped instead of neutralized" >&2; exit 1 ;;
+          esac
+          # Severest first, so the row that decides whether the pull request
+          # can merge is never the one that collapses.
+          first_row=$(printf '%s' "$body" | grep -m1 '^| \(error\|warning\|info\) ')
+          case "$first_row" in
+            '| error | '*) ;;
+            *) echo "FAIL: the first row is not the error: $first_row" >&2; exit 1 ;;
+          esac
+          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
+          if [ "$mode" != "comment" ]; then
+            echo "FAIL: expected delivery mode 'comment', got '$mode'" >&2
+            exit 1
           fi
           echo "PASS"
