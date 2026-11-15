@@ -24,6 +24,38 @@ readonly allow_external_refs="${15}"
 readonly review="${16}"
 readonly github_token="${17}"
 
+# from_fork reports whether this run is a pull request from a fork. GitHub makes
+# GITHUB_TOKEN read-only there, so a comment cannot post however the job is
+# configured, and the job summary is the only place the link can go.
+from_fork () {
+    [ -n "${GITHUB_EVENT_PATH:-}" ] || return 1
+    [ -f "$GITHUB_EVENT_PATH" ] || return 1
+    head_repo=$(jq -r '.pull_request.head.repo.full_name // empty' < "$GITHUB_EVENT_PATH" 2>/dev/null) || return 1
+    [ -n "$head_repo" ] || return 1
+    [ "$head_repo" != "${GITHUB_REPOSITORY:-}" ]
+}
+
+# review_comment_changes writes the changes themselves into the comment, so a
+# reviewer reads what broke on the pull request instead of following a link to
+# find out. Capped at $comment_change_limit rows: a changelog can run to
+# thousands of changes and a GitHub comment is limited to 65,536 characters.
+# $1: the json render of the comparison (Run 3).
+comment_change_limit=5
+review_comment_changes () {
+    changes_file="$1"
+    [ -s "$changes_file" ] || return 0
+
+    jq -r --argjson max "$comment_change_limit" '
+        def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
+        def endpoint:
+            if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
+        "| severity | change | endpoint |",
+        "| --- | --- | --- |",
+        (.[:$max][] | "| " + (.level | severity) + " | `" + .id + "` | `" + endpoint + "` |"),
+        (if length > $max then "", "\(length - $max) more in the review." else empty end)
+    ' < "$changes_file" 2>/dev/null || true
+}
+
 # post_review_comment posts (or updates) a single pull-request comment with the
 # free side-by-side review link, so reviewers see it on the PR rather than only
 # in the job summary (a low-traffic page most users never open). Best-effort and
@@ -78,14 +110,21 @@ post_review_comment () {
         | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
 
     if [ -n "$review_url" ]; then
+        if [ "${change_count:-0}" -eq 1 ]; then
+            heading="1 breaking change in this pull request"
+        else
+            heading="${change_count:-0} breaking changes in this pull request"
+        fi
         body="${marker}
-### 📋 [View the side-by-side API change review](${review_url})
+### ⚠️ ${heading}
 
-The link expires in 7 days.
+$(review_comment_changes "${changes_json:-}")
+
+[See them side by side, with the old and new spec](${review_url}) (the link expires in 7 days)
 
 🔒 Your API specs are encrypted in CI before they're uploaded. The decryption key stays in this link's URL fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs. [How it works →](https://www.oasdiff.com/docs/free-review#privacy)
 
-<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/free-review#github-action). To turn this off (no spec upload, no comment), set \`review: false\` on the action.</sub>"
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/free-review#github-action). To approve or reject each change here, with a commit status that holds the merge until the team signs off, see [oasdiff Pro](https://www.oasdiff.com/pricing). To turn this comment off (no spec upload, no comment), set \`review: false\` on the action.</sub>"
     elif [ -n "$existing_id" ]; then
         body="${marker}
 ### ✅ No breaking changes in the latest revision."
@@ -110,9 +149,14 @@ The link expires in 7 days.
     if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
         [ -n "$review_url" ] && report_review_delivery "comment"
         echo "oasdiff: posted the side-by-side review link as a PR comment."
+    elif from_fork; then
+        # Expected, not a misconfiguration: report it apart from the failures
+        # the user can act on, and say it plainly rather than as a warning.
+        [ -n "$review_url" ] && report_review_delivery "comment_fork"
+        echo "oasdiff: this pull request comes from a fork, where GitHub makes the token read-only, so the review link is in the job summary instead of a comment."
     else
         [ -n "$review_url" ] && report_review_delivery "comment_failed"
-        echo "::notice::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). On fork pull requests the token is read-only; otherwise grant 'permissions: pull-requests: write'. The link is still in the job summary."
+        echo "::warning::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). Add 'permissions: pull-requests: write' to the job that runs this action. The link is in the job summary meanwhile."
     fi
 }
 
@@ -229,17 +273,22 @@ oasdiff breaking "$base" "$revision" $flags --format githubactions --template= |
 delimiter=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
 echo "breaking<<$delimiter" >>"$GITHUB_OUTPUT"
 
-# Whether there are breaking changes is read off oasdiff's exit code with
-# --fail-on=WARN (breaking renders WARN-and-above, and WARN is the lowest level
-# it accepts for fail-on): exit 1 means at least one breaking change, 0 means
-# none. This is format-proof; parsing $breaking_changes is not, because its shape
-# follows any 'format' set in .oasdiff.yaml (e.g. json renders "[]", not "No ...").
-# The explicit --fail-on overrides a config fail-on for this probe only; Run 1's
-# authoritative gate exit code is untouched.
-changes_exit=0
+# Run 3: one json render answers two questions, how many breaking changes
+# there are and what they are, so the count below and the PR comment read the
+# same data. json is format-proof, where parsing $breaking_changes is not: its
+# shape follows any 'format' set in .oasdiff.yaml (json renders "[]", not
+# "No ..."). --format and --template= override that config for this render
+# only; Run 1's authoritative gate exit code is untouched. The render goes to a
+# file, never a variable, because a large changelog on a command line hits
+# ARG_MAX.
+changes_json=$(mktemp)
 # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
-oasdiff breaking "$base" "$revision" $flags --fail-on=WARN --template= >/dev/null 2>&1 || changes_exit=$?
-if [ "$changes_exit" -eq 1 ]; then
+oasdiff breaking "$base" "$revision" $flags --format json --template= > "$changes_json" 2>/dev/null || true
+change_count=$(jq 'length' < "$changes_json" 2>/dev/null) || change_count=0
+case "$change_count" in
+    ''|*[!0-9]*) change_count=0 ;;
+esac
+if [ "$change_count" -gt 0 ]; then
     write_output "$(echo "$breaking_changes" | head -n 1)" "$breaking_changes"
 
     free_review_url=""
@@ -293,6 +342,8 @@ else
         post_review_comment ""
     fi
 fi
+
+rm -f "$changes_json"
 
 echo "$delimiter" >>"$GITHUB_OUTPUT"
 # review_url is a single-line output, written after the multiline `breaking`

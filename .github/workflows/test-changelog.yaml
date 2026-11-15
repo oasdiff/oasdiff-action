@@ -229,3 +229,99 @@ jobs:
             echo "FAIL: review URL not in step summary" >&2; exit 1
           fi
           echo "PASS"
+
+  oasdiff_changelog_comment_lists_the_changes:
+    runs-on: ubuntu-latest
+    name: Test the PR comment lists the changes
+    # Sibling of the breaking action's job of the same name: the two
+    # entrypoints build the same comment, so a change to one that misses the
+    # other fails here. Stubs oasdiff (a 6-change json render) and curl
+    # (captures the comment body).
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + curl and run the entrypoint
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) fmt=json ;;
+              githubactions) fmt=gha ;;
+              --open) fmt=open ;;
+            esac
+          done
+          case "${fmt:-text}" in
+            json)
+              printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}'
+              printf ',{"id":"response-property-became-optional","text":"became optional","level":1,"operation":"POST","path":"/pets","section":"paths"}'
+              i=3
+              while [ "$i" -le 6 ]; do
+                printf ',{"id":"request-property-added","text":"added","level":1,"operation":"PUT","path":"/pets%s","section":"paths"}' "$i"
+                i=$((i+1))
+              done
+              printf ']'
+              ;;
+            gha) echo "::error file=specs/base.yaml,line=11::API removed" ;;
+            open) echo "https://www.oasdiff.com/review/e/stub-id#k=stub-key" >&2 ;;
+            *) echo "6 changes: 1 error, 0 warning, 5 info" ;;
+          esac
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$prev" in -X) method=$a ;; esac
+            prev=$a
+          done
+          case " $* " in
+            *api/telemetry*) cat > /tmp/run/telemetry.json; exit 0 ;;
+          esac
+          if [ "${method:-GET}" = GET ]; then echo '[]'; exit 0; fi
+          cat > /tmp/run/comment.json
+          printf '201'
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/7/merge
+          export GITHUB_REPOSITORY=acme/api
+          export GITHUB_OUTPUT=/tmp/run/output
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          export GITHUB_ACTION_REF=v0
+          printf '{"pull_request":{"head":{"repo":{"full_name":"acme/api"}}}}' > /tmp/run/event.json
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          export PATH=/tmp/stub:$PATH
+
+          ./changelog/entrypoint.sh 'specs/base.yaml' 'specs/revision.yaml' \
+            'false' '' '' 'false' 'false' '' '' '' 'false' '' '' '' 'false' 'true' 'fake-token' ''
+
+          if [ ! -f /tmp/run/comment.json ]; then
+            echo "FAIL: no comment was posted" >&2
+            exit 1
+          fi
+          body=$(jq -r '.body' < /tmp/run/comment.json)
+          echo "--- comment body ---"
+          echo "$body"
+          for expected in \
+            '6 API changes in this pull request' \
+            'api-removed-without-deprecation' \
+            'response-property-became-optional' \
+            '| error | ' \
+            '| info | ' \
+            '1 more in the review.' \
+            'oasdiff Pro'
+          do
+            case "$body" in
+              *"$expected"*) ;;
+              *) echo "FAIL: the comment is missing: $expected" >&2; exit 1 ;;
+            esac
+          done
+          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
+          if [ "$mode" != "comment" ]; then
+            echo "FAIL: expected delivery mode 'comment', got '$mode'" >&2
+            exit 1
+          fi
+          echo "PASS"
