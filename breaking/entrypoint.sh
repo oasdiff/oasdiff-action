@@ -303,25 +303,23 @@ pro_review () {
 
     pro_gate="$gate"
     echo "### 📋 [Review and approve the API changes](${review_url})" >> "$GITHUB_STEP_SUMMARY"
-    pro_comment "$review_url" "$gate"
+    pro_comment "$review_url"
     set_commit_status "$owner" "$repo" "$head_sha" "$gate" "$review_url"
 }
 
 # pro_comment posts or updates the Pro review comment (marker oasdiff-pro-review).
 pro_comment () {
     review_url="$1"
-    gate="$2"
     if [ -z "$github_token" ]; then
         echo "::notice::oasdiff: review uploaded; add 'github-token: \${{ github.token }}' and grant 'permissions: pull-requests: write, statuses: write' to post the review comment and set the \`oasdiff\` status check. The link is in the job summary."
         return 0
     fi
     api="${GITHUB_API_URL:-https://api.github.com}"
     marker="<!-- oasdiff-pro-review -->"
-    case "$gate" in
-        approved) status_line="✅ All changes approved." ;;
-        rejected) status_line="❌ Changes requested." ;;
-        *)        status_line="⏳ Review required: approve every change to make the \`oasdiff\` status check pass." ;;
-    esac
+    # The comment does not say whether the changes are approved: it is written
+    # when the job runs, and a decision made in the review afterwards reaches
+    # the \`oasdiff\` status check, not the comment.
+    status_line="Approve or reject each breaking change in the review. The \`oasdiff\` status check on this pull request shows whether they are all approved."
 
     existing_id=$(curl -s \
         -H "Authorization: token $github_token" \
@@ -345,7 +343,7 @@ $(review_comment_changes "${changes_json:-}")
 
 🔒 The comparison is encrypted in CI before it's uploaded. The decryption key stays in this link's fragment (after the #), which browsers never send to a server, so oasdiff cannot read your specs.
 
-<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/setup). The \`oasdiff\` status check passes once every change is approved; make it a required check to block merging.</sub>"
+<sub>Posted automatically by the [oasdiff GitHub Action](https://www.oasdiff.com/docs/setup). Make the \`oasdiff\` status check a required check to block merging until every breaking change is approved.</sub>"
 
     payload=$(jq -n --arg body "$body" '{body: $body}')
     if [ -n "$existing_id" ]; then
