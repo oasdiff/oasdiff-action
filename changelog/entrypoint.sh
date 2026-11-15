@@ -58,22 +58,36 @@ from_fork () {
 
 # review_comment_changes writes the changes themselves into the comment, so a
 # reviewer reads what changed on the pull request instead of following a link to
-# find out. Capped at $comment_change_limit rows: a changelog can run to
+# find out. Severest first, so the rows above the fold are the ones that decide
+# whether the pull request can merge; $comment_rows_shown of them stay open and
+# the rest collapse, up to $comment_rows_listed, since a changelog can run to
 # thousands of changes and a GitHub comment is limited to 65,536 characters.
 # $1: the json render of the comparison.
-comment_change_limit=5
+comment_rows_shown=5
+comment_rows_listed=50
 review_comment_changes () {
     changes_file="$1"
     [ -s "$changes_file" ] || return 0
 
-    jq -r --argjson max "$comment_change_limit" '
+    jq -r --argjson shown "$comment_rows_shown" --argjson listed "$comment_rows_listed" '
         def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
         def endpoint:
             if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
-        "| severity | change | endpoint |",
-        "| --- | --- | --- |",
-        (.[:$max][] | "| " + (.level | severity) + " | `" + .id + "` | `" + endpoint + "` |"),
-        (if length > $max then "", "\(length - $max) more in the review." else empty end)
+        def row: "| " + (.level | severity) + " | `" + .id + "` | `" + endpoint + "` |";
+        def header: "| severity | change | endpoint |", "| --- | --- | --- |";
+        sort_by([-.level, (.path // ""), (.operation // ""), .id]) as $all
+        | ($all | length) as $total
+        | header,
+          ($all[:$shown][] | row),
+          (if $total > $shown then
+              "",
+              "<details><summary>\([$total, $listed] | min - $shown) more</summary>",
+              "",
+              header,
+              ($all[$shown:$listed][] | row),
+              "</details>"
+           else empty end),
+          (if $total > $listed then "", "\($total - $listed) more in the review." else empty end)
     ' < "$changes_file" 2>/dev/null || true
 }
 

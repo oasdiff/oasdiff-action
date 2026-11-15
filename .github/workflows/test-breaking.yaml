@@ -431,7 +431,8 @@ jobs:
             '| severity | change | endpoint |' \
             'api-removed-without-deprecation' \
             'GET /pets5' \
-            '2 more in the review.' \
+            '<details><summary>2 more</summary>' \
+            'GET /pets6' \
             'oasdiff Pro'
           do
             case "$body" in
@@ -439,10 +440,13 @@ jobs:
               *) echo "FAIL: the comment is missing: $expected" >&2; exit 1 ;;
             esac
           done
-          # Capped at 5 rows: the 6th change must not be listed.
-          case "$body" in
-            *'GET /pets6'*) echo "FAIL: the comment lists more than the cap" >&2; exit 1 ;;
-          esac
+          # Five rows stay open and the rest collapse, so the 6th change is
+          # listed but only inside the details block.
+          open_rows=$(printf '%s' "$body" | sed -n '1,/<details>/p' | grep -c '^| error ')
+          if [ "$open_rows" -ne 5 ]; then
+            echo "FAIL: expected 5 rows above the collapsed block, got $open_rows" >&2
+            exit 1
+          fi
           mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
           if [ "$mode" != "comment" ]; then
             echo "FAIL: expected delivery mode 'comment', got '$mode'" >&2
