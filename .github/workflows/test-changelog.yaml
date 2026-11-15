@@ -386,7 +386,7 @@ jobs:
         uses: ./changelog
         with:
           base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          revision: 'specs/revision-breaking.yaml'
           fail-on: ERR
           review: false
       - name: Assert the step failed and still produced the changelog
@@ -419,7 +419,7 @@ jobs:
         uses: ./changelog
         with:
           base: 'specs/base.yaml'
-          revision: 'specs/revision.yaml'
+          revision: 'specs/revision-breaking.yaml'
           review: false
       - name: Assert the fail-on in the file failed the step
         run: |
