@@ -41,8 +41,9 @@ jobs:
             export STUB_CODE="$1" STUB_STDERR="$2"; cmd="$3"
             : > "$GITHUB_OUTPUT"; : > "$GITHUB_STEP_SUMMARY"
             case "$cmd" in
-              breaking)   sh breaking/entrypoint.sh   base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
-              changelog)  sh changelog/entrypoint.sh  base.yaml rev.yaml "" "" "" "" "" "" "" "" "" "" "" "" "false" ;;
+              breaking|changelog)
+                env OASDIFF_ACTION_COMMAND="$cmd" INPUT_BASE=base.yaml INPUT_REVISION=rev.yaml \
+                  'INPUT_ALLOW-EXTERNAL-REFS=false' sh breaking/entrypoint.sh ;;
               diff)       sh diff/entrypoint.sh       base.yaml rev.yaml "" "" "" "" "" "" "" "false" ;;
               pr-comment) sh pr-comment/entrypoint.sh base.yaml rev.yaml "" "" "" "" "" "" "false" ;;
               validate)   sh validate/entrypoint.sh   spec.yaml "" "false" ;;
