@@ -46,10 +46,9 @@ jobs:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           fail-on: WARN
-          github-token: ${{ github.token }}
 ```
 
-This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found. When changes are found it posts a PR comment listing them, linking to a side-by-side review; drop `github-token` and the `pull-requests: write` permission to keep that link in the job summary instead.
+This compares your spec on the PR branch against the base branch and fails the workflow if any breaking changes are found. When changes are found it posts a PR comment listing them, linking to a side-by-side review; without the `pull-requests: write` permission, the link goes to the job summary instead.
 
 ---
 
@@ -71,7 +70,7 @@ The following actions run the oasdiff CLI directly in your GitHub runner. No acc
 
 ### Check for breaking changes
 
-Detects changes that break existing API clients and writes inline `::error::` annotations on the pull request's Files changed tab. Fails the workflow when changes at or above the `fail-on` severity are found. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
+Detects changes that break existing API clients. On a pull request it writes inline annotations on the Files changed tab, posts a comment listing the changes with a link to a side-by-side review, and fails the job when a change reaches the `fail-on` severity. The two specs are encrypted in CI before the review is uploaded, so the server cannot read them.
 
 ```yaml
 name: oasdiff
@@ -92,76 +91,35 @@ jobs:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           fail-on: WARN
-          github-token: ${{ github.token }}
 ```
 
-| Input | Default | Description | Accepted values |
-|---|---|---|---|
-| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
-| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `fail-on` | `''` | Fail with exit code 1 if changes are found at or above this severity | `ERR`, `WARN` |
-| `include-checks` | `''` | **Deprecated and ignored.** oasdiff retired the optional-checks mechanism; set `severity-levels` in `.oasdiff.yaml` instead. Setting it emits a warning annotation and has no effect | — |
-| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
-| `deprecation-days-beta` | `31` | Minimum sunset period (days) for deprecation of beta API endpoints | integer |
-| `deprecation-days-stable` | `180` | Minimum sunset period (days) for deprecation of stable API endpoints | integer |
-| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
-| `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
-| `composed` | `false` | Run in composed mode | `true`, `false` |
-| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
-| `err-ignore` | `''` | Path to a file containing regex patterns for error-level changes to ignore | file path |
-| `warn-ignore` | `''` | Path to a file containing regex patterns for warning-level changes to ignore | file path |
-| `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
-| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
-| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
-| `github-token` | `${{ github.token }}` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to an empty string to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | a token, or `''` |
-| `config` | `''` | Path to an oasdiff config file, for a repository that does not keep `.oasdiff.yaml` at its root | a file path |
+| Input | Default | Description |
+|---|---|---|
+| `base` | required | The base (old) OpenAPI spec: a file path, a URL, or a git ref such as `origin/main:openapi.yaml` |
+| `revision` | required | The revised (new) OpenAPI spec, in the same forms |
+| `fail-on` | `''` | Fail the job when a change is at or above this severity: `ERR` or `WARN`, or `MISSING-VERSION-BUMP` to fail only when breaking changes come without a major version increase in `info.version`. Empty never fails |
+| `oasdiff-token` | `''` | Your oasdiff Pro token. See [Pro: Approve and gate changes](#pro-approve-and-gate-changes) |
+| `github-token` | `${{ github.token }}` | Token used to post the comment. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to `''` to keep the review link in the job summary only |
+| `review` | `true` | Upload the encrypted comparison and link to the side-by-side review. Set `false` so that no spec leaves CI; annotations and the job result are unaffected |
+| `config` | `''` | Path to an oasdiff config file, when `.oasdiff.yaml` is not at the repository root |
+| `output-to-file` | `''` | Also write the report to this file |
+| `composed` | `false` | Run in [composed mode](https://github.com/oasdiff/oasdiff/blob/main/docs/COMPOSED.md), comparing globs of spec files |
+| `allow-external-refs` | `false` | Resolve external `$ref`s. Off by default to prevent SSRF on untrusted pull requests; set `true` if your spec references external URLs you trust |
+
+These inputs describe the run. How oasdiff judges the API is configuration, and it goes in [`.oasdiff.yaml`](#configuring-with-oasdiffyaml): ignore files, severity levels, `flatten-allof`, `exclude-elements`, `filter-extension`, `include-path-params`, the deprecation windows, and every other oasdiff flag. The inputs of those names that earlier versions documented still work.
 
 ### Generate a changelog
 
-The `breaking` action, reporting every change that can affect API consumers instead of only the breaking ones. It takes the same inputs for the run, including `fail-on` and, for Pro, `oasdiff-token`. Outputs the changes (breaking and non-breaking) between two specs, and writes inline annotations on the pull request's Files changed tab for the ones at error and warning level. Documentation-only edits, such as descriptions and examples, are not included; use the [diff action](#generate-a-diff-report) to see every difference in the API definition. When changes are found it also uploads the comparison and links to a full side-by-side review (the `review` input, on by default); the two specs are encrypted in CI before upload, so the server cannot read them. The changes and the link are posted as a pull-request comment when you pass `github-token` (and grant `pull-requests: write`); otherwise, and on fork PRs where the token is read-only, the link falls back to the job summary.
+The same action, reporting every change that can affect API consumers instead of only the breaking ones. It annotates the changes at error and warning level and takes the inputs listed above; `fail-on` also accepts `INFO` here.
 
 ```yaml
-name: oasdiff
-on:
-  pull_request:
-    branches: [ "main" ]
-permissions:
-  contents: read
-  pull-requests: write   # lets the action post the changes as a PR comment
-jobs:
-  changelog:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: git fetch --depth=1 origin ${{ github.base_ref }}
       - uses: oasdiff/oasdiff-action/changelog@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
-          github-token: ${{ github.token }}
 ```
 
-| Input | Default | Description | Accepted values |
-|---|---|---|---|
-| `base` | — (required) | Path to the base (old) OpenAPI spec | file path, URL, git ref |
-| `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
-| `format` | `''` | Output format | `text`, `json`, `yaml`, `markdown`, `html` |
-| `level` | `''` | Minimum severity level to include in output | `INFO`, `WARN`, `ERR` |
-| `fail-on` | `''` | Fail with exit code 1 when a change is at or above this severity. Empty never fails | `ERR`, `WARN`, `INFO`, `MISSING-VERSION-BUMP` |
-| `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
-| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
-| `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
-| `composed` | `false` | Run in composed mode | `true`, `false` |
-| `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
-| `prefix-base` | `''` | Prefix to add to all paths in the base spec | string |
-| `prefix-revision` | `''` | Prefix to add to all paths in the revised spec | string |
-| `case-insensitive-headers` | `false` | Compare headers case-insensitively | `true`, `false` |
-| `template` | `''` | Custom Go template for output formatting | Go template string |
-| `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
-| `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
-| `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
-| `github-token` | `${{ github.token }}` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to an empty string to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | a token, or `''` |
-| `config` | `''` | Path to an oasdiff config file, for a repository that does not keep `.oasdiff.yaml` at its root | a file path |
+What the report includes and how it is rendered (`level`, `format`, `template`, path prefixes) is configuration too, set in `.oasdiff.yaml`.
 
 ### Generate a diff report
 
