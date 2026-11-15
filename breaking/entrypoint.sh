@@ -88,13 +88,25 @@ from_fork () {
 # the rest collapse, up to $comment_rows_listed, since a changelog can run to
 # thousands of changes and a GitHub comment is limited to 65,536 characters.
 # $1: the json render of the comparison (Run 3).
+# $2: the review URL. Each row links to its own change in the review, which
+#     opens on the side-by-side diff of that change.
 comment_rows_shown=5
 comment_rows_listed=50
 review_comment_changes () {
     changes_file="$1"
+    changes_review_url="${2:-}"
     [ -s "$changes_file" ] || return 0
 
-    jq -r --argjson shown "$comment_rows_shown" --argjson listed "$comment_rows_listed" '
+    # The key is the URL's fragment, so the change goes in the query before it.
+    review_page="${changes_review_url%%#*}"
+    review_key="${changes_review_url#"$review_page"}"
+    case "$review_page" in
+        *\?*) review_page="${review_page}&highlight=" ;;
+        *)    review_page="${review_page}?highlight=" ;;
+    esac
+
+    jq -r --argjson shown "$comment_rows_shown" --argjson listed "$comment_rows_listed" \
+        --arg page "$review_page" --arg key "$review_key" '
         def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
         def endpoint:
             if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
@@ -108,9 +120,11 @@ review_comment_changes () {
             | gsub("`"; "&#96;") | gsub("\\|"; "&#124;") | gsub("\\*"; "&#42;")
             | gsub("_"; "&#95;") | gsub("://"; ":&#47;&#47;") | gsub("www\\."; "www&#46;")
             | gsub("[\r\n]+"; " ");
+        def diff_link:
+            if $key == "" or (.fingerprint // "") == "" then "" else "[view](" + $page + (.fingerprint | @uri) + $key + ")" end;
         def row: "| " + (.level | severity) + " | " + ((.text // "") | inert)
-            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | <code>" + (endpoint | inert) + "</code> |";
-        def header: "| severity | change | endpoint |", "| --- | --- | --- |";
+            + " | <code>" + (endpoint | inert) + "</code> | " + diff_link + " |";
+        def header: "| severity | change | endpoint | diff |", "| --- | --- | --- | --- |";
         sort_by([-.level, (.path // ""), (.operation // ""), .id]) as $all
         | ($all | length) as $total
         | header,
@@ -189,7 +203,7 @@ post_review_comment () {
         body="${marker}
 ### ${comment_icon} ${heading}
 
-$(review_comment_changes "${changes_json:-}")
+$(review_comment_changes "${changes_json:-}" "$review_url")
 
 [See them side by side, with the old and new spec](${review_url}) (the link expires in 7 days)
 
@@ -337,7 +351,7 @@ pro_comment () {
 
 ${status_line}
 
-$(review_comment_changes "${changes_json:-}")
+$(review_comment_changes "${changes_json:-}" "$review_url")
 
 [Review and approve the changes](${review_url})
 
