@@ -301,6 +301,7 @@ pro_review () {
         return 0
     fi
 
+    pro_gate="$gate"
     echo "### 📋 [Review and approve the API changes](${review_url})" >> "$GITHUB_STEP_SUMMARY"
     pro_comment "$review_url" "$gate"
     set_commit_status "$owner" "$repo" "$head_sha" "$gate" "$review_url"
@@ -421,6 +422,27 @@ pro_review_clear () {
         "${api}/repos/${owner}/${repo}/issues/comments/${existing_id}" --data-binary @- 2>/dev/null || true
 }
 
+# finish exits the job. A Pro review makes a breaking change something a
+# reviewer can approve, so once every breaking change is approved, a fail-on
+# of ERR or WARN is satisfied and the job passes. Until then the job fails as
+# it does without a token, so a job that is a required check keeps blocking
+# the merge. INFO and MISSING-VERSION-BUMP are left alone: info changes are
+# not part of the approval, and a missing version bump is a rule about the
+# release, which approving the changes does not answer.
+# $1: the exit code of the report run.
+finish () {
+    code="$1"
+    if [ "$code" -eq 1 ] && [ -n "${pro_gate:-}" ]; then
+        if [ "$pro_gate" != "approved" ]; then
+            echo "::notice::oasdiff: fail-on fails this job until every breaking change is approved. Approve them in the review, then re-run the job."
+        elif [ "$fail_on" != "INFO" ] && [ "$fail_on" != "MISSING-VERSION-BUMP" ] && [ -z "${version_policy_violated:-}" ]; then
+            echo "oasdiff: every breaking change in this pull request is approved, so fail-on does not fail the job."
+            code=0
+        fi
+    fi
+    exit "$code"
+}
+
 run_breaking () {
     echo "running oasdiff breaking... base: $base, revision: $revision, fail_on: $fail_on, include_checks: $include_checks, include_path_params: $include_path_params, deprecation_days_beta: $deprecation_days_beta, deprecation_days_stable: $deprecation_days_stable, exclude_elements: $exclude_elements, filter_extension: $filter_extension, composed: $composed, flatten_allof: $flatten_allof, err_ignore: $err_ignore, warn_ignore: $warn_ignore, output_to_file: $output_to_file"
 
@@ -480,6 +502,8 @@ run_breaking () {
     _err=$(mktemp)
     # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
     breaking_changes=$(oasdiff breaking "$base" "$revision" $flags $fail_on_flag 2>"$_err") || exit_code=$?
+    version_policy_violated=""
+    grep -q '^versioning policy: violated' "$_err" && version_policy_violated=1
     [ -s "$_err" ] && cat "$_err" >&2
     # Promote a genuine oasdiff failure to a Checks-tab annotation. Exit 0 is
     # success and exit 1 is the intended "breaking changes found" / fail-on result;
@@ -606,7 +630,7 @@ run_breaking () {
     # are no breaking changes (the notice/URL only fire then).
     echo "review_url=${free_review_url:-${review_url:-}}" >> "$GITHUB_OUTPUT"
 
-    exit $exit_code
+    finish "$exit_code"
 }
 
 run_changelog () {
@@ -682,6 +706,8 @@ run_changelog () {
     fi
     # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
     output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags $fail_on_flag 2>"$_err") || exit_code=$?
+    version_policy_violated=""
+    grep -q '^versioning policy: violated' "$_err" && version_policy_violated=1
     # Only codes >=2 are real errors. Exit 1 is a fail-on result (the changelog
     # action has no fail-on input, but .oasdiff.yaml can set one); the changelog
     # action doesn't gate, so don't let it abort the run or suppress the review below.
@@ -800,7 +826,7 @@ run_changelog () {
     echo "review_url=${free_review_url:-${review_url:-}}" >> "$GITHUB_OUTPUT"
 
     # 1 when fail-on was reached, from the input or from .oasdiff.yaml.
-    exit "$exit_code"
+    finish "$exit_code"
 }
 
 case "$oasdiff_command" in

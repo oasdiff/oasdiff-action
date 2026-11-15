@@ -675,3 +675,80 @@ jobs:
             echo "FAIL: review URL not in step summary" >&2; exit 1
           fi
           echo "PASS"
+
+  oasdiff_breaking_pro_approval_clears_fail_on:
+    runs-on: ubuntu-latest
+    name: Test an approved Pro review satisfies fail-on, and a pending one does not
+    # With a token, a breaking change is something a reviewer can approve. The
+    # job keeps failing on fail-on while the review is pending, so a job that is
+    # a required check still blocks the merge, and passes once every breaking
+    # change is approved. MISSING-VERSION-BUMP is a rule about the release and
+    # is not cleared by approval. Stubs oasdiff: the report run exits 1 when
+    # --fail-on is set, and --open reports the review status in STUB_STATUS.
+    steps:
+      - uses: actions/checkout@v7
+      - name: Stub oasdiff + curl, run the three cases
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/stub /tmp/run
+
+          cat > /tmp/stub/oasdiff <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do
+            case "$a" in
+              json) printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0 ;;
+              githubactions) echo "::error file=specs/base.yaml,line=11::API removed"; exit 0 ;;
+              --open)
+                echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
+                echo "oasdiff: review status: ${STUB_STATUS}" >&2
+                exit 0 ;;
+              --fail-on) failing=1 ;;
+            esac
+          done
+          echo "1 changes: 1 error, 0 warning, 0 info"
+          [ -n "${failing:-}" ] && exit 1
+          exit 0
+          STUB
+          chmod +x /tmp/stub/oasdiff
+
+          cat > /tmp/stub/curl <<'STUB'
+          #!/bin/sh
+          for a in "$@"; do case "$a" in *"%{http_code}"*) cat > /dev/null; echo "201"; exit 0 ;; esac; done
+          echo "[]"
+          STUB
+          chmod +x /tmp/stub/curl
+
+          export GITHUB_REF=refs/pull/123/merge
+          export GITHUB_REPOSITORY=acme/widgets
+          export GITHUB_SHA=deadbeef
+          export GITHUB_OUTPUT=/tmp/run/out
+          export GITHUB_STEP_SUMMARY=/tmp/run/summary
+          printf '{"pull_request":{"head":{"sha":"deadbeef"},"base":{"sha":"baadcafe"}}}' > /tmp/run/event.json
+          export GITHUB_EVENT_PATH=/tmp/run/event.json
+          export PATH=/tmp/stub:$PATH
+
+          # run <review status> <fail-on> -> sets $rc and $out
+          run () {
+            : > "$GITHUB_OUTPUT"; : > "$GITHUB_STEP_SUMMARY"
+            set +e
+            out=$(env STUB_STATUS="$1" OASDIFF_ACTION_COMMAND=breaking INPUT_BASE=b INPUT_REVISION=r \
+              "INPUT_FAIL-ON=$2" 'INPUT_GITHUB-TOKEN=gh-token' 'INPUT_OASDIFF-TOKEN=oasdiff-token' \
+              bash ./breaking/entrypoint.sh 2>&1)
+            rc=$?
+            set -e
+            echo "--- review $1, fail-on $2: exit $rc"; echo "$out" | grep "oasdiff:" || true
+          }
+
+          run pending WARN
+          if [ "$rc" -ne 1 ]; then echo "FAIL: a pending review must leave fail-on failing the job" >&2; exit 1; fi
+          case "$out" in
+            *"until every breaking change is approved"*) ;;
+            *) echo "FAIL: no notice saying how to clear the failure" >&2; exit 1 ;;
+          esac
+
+          run approved WARN
+          if [ "$rc" -ne 0 ]; then echo "FAIL: an approved review must satisfy fail-on" >&2; exit 1; fi
+
+          run approved MISSING-VERSION-BUMP
+          if [ "$rc" -ne 1 ]; then echo "FAIL: approval must not clear a missing version bump" >&2; exit 1; fi
+          echo "PASS"
