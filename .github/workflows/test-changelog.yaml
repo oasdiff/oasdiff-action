@@ -105,12 +105,13 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/stub /tmp/run
 
-          # The entrypoint invokes oasdiff three times: the changes probe
-          # (--fail-on=INFO -> exit 1 means changes exist), the user-facing
-          # render, and the authenticated --open upload. Branch on the args.
+          # The entrypoint invokes oasdiff three times: the json render (its
+          # length says whether there are changes, and feeds the PR comment),
+          # the user-facing render, and the authenticated --open upload. Branch
+          # on the args.
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "--fail-on=INFO" ] && exit 1; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo 'Error: upload failed (HTTP 402): {"code":"subscription_expired","message":"Your oasdiff trial or subscription has expired. Renew at https://www.oasdiff.com/pricing to continue using oasdiff Pro.","upgrade_url":"https://www.oasdiff.com/pricing"}' >&2
@@ -162,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test changelog Pro path posts the review comment and sets the gate
     # Companion to changelog_pro_expired_trial_warns_without_failing: the success
-    # path. Stubs oasdiff (changes present; --open prints a /review/ep URL +
+    # path. Stubs oasdiff (one change in the json render; --open prints a /review/ep URL +
     # "review status: pending") and curl (GitHub API: empty comment list, then
     # 2xx for the comment + status POSTs). Asserts the Pro review comment is
     # posted, the oasdiff commit status is set, and the review URL reaches the
@@ -177,7 +178,7 @@ jobs:
 
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "--fail-on=INFO" ] && exit 1; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo "oasdiff: opening review at https://www.oasdiff.com/review/ep/test-token-uuid#k=test-key" >&2
