@@ -429,7 +429,8 @@ jobs:
           for expected in \
             '7 breaking changes in this pull request' \
             '| severity | change | endpoint |' \
-            'api-removed-without-deprecation' \
+            'API removed [' \
+            'https://www.oasdiff.com/checks/api-removed-without-deprecation' \
             'GET /pets5' \
             '<details><summary>2 more</summary>' \
             'GET /pets6' \

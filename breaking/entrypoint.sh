@@ -52,7 +52,9 @@ review_comment_changes () {
         def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
         def endpoint:
             if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
-        def row: "| " + (.level | severity) + " | `" + .id + "` | `" + endpoint + "` |";
+        def cell: (.text // "") | gsub("\n"; " ") | gsub("\\|"; "\\\\|");
+        def row: "| " + (.level | severity) + " | " + cell
+            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | `" + endpoint + "` |";
         def header: "| severity | change | endpoint |", "| --- | --- | --- |";
         sort_by([-.level, (.path // ""), (.operation // ""), .id]) as $all
         | ($all | length) as $total
