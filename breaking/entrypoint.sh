@@ -88,13 +88,30 @@ from_fork () {
 # the rest collapse, up to $comment_rows_listed, since a changelog can run to
 # thousands of changes and a GitHub comment is limited to 65,536 characters.
 # $1: the json render of the comparison (Run 3).
+# $2: optional, the decisions recorded on the review (read_review_decisions).
+#     With it, each breaking change carries its status: approved, rejected or
+#     pending. Other changes need no approval and have none.
 comment_rows_shown=5
 comment_rows_listed=50
 review_comment_changes () {
     changes_file="$1"
+    decisions_file="${2:-}"
     [ -s "$changes_file" ] || return 0
+    if [ -s "$decisions_file" ]; then
+        with_status=true
+    else
+        with_status=false
+        decisions_file=/dev/null
+    fi
 
-    jq -r --argjson shown "$comment_rows_shown" --argjson listed "$comment_rows_listed" '
+    jq -r --argjson shown "$comment_rows_shown" --argjson listed "$comment_rows_listed" \
+        --argjson with_status "$with_status" --slurpfile decisions "$decisions_file" '
+        (($decisions[0].changes // []) | map({(.fingerprint): .status}) | add // {}) as $status
+        | def status_cell:
+            if .level < 2 then ""
+            elif $status[.fingerprint // ""] == "approved" then "✅ approved"
+            elif $status[.fingerprint // ""] == "rejected" then "❌ rejected"
+            else "⏳ pending" end;
         def severity: if . == 3 then "error" elif . == 2 then "warning" else "info" end;
         def endpoint:
             if (.operation // "") == "" then (.section // "") else .operation + " " + .path end;
@@ -109,8 +126,11 @@ review_comment_changes () {
             | gsub("_"; "&#95;") | gsub("://"; ":&#47;&#47;") | gsub("www\\."; "www&#46;")
             | gsub("[\r\n]+"; " ");
         def row: "| " + (.level | severity) + " | " + ((.text // "") | inert)
-            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | <code>" + (endpoint | inert) + "</code> |";
-        def header: "| severity | change | endpoint |", "| --- | --- | --- |";
+            + " [`" + .id + "`](https://www.oasdiff.com/checks/" + .id + ") | <code>" + (endpoint | inert) + "</code> |"
+            + (if $with_status then " " + status_cell + " |" else "" end);
+        def header:
+            if $with_status then "| severity | change | endpoint | status |", "| --- | --- | --- | --- |"
+            else "| severity | change | endpoint |", "| --- | --- | --- |" end;
         sort_by([-.level, (.path // ""), (.operation // ""), .id]) as $all
         | ($all | length) as $total
         | header,
@@ -303,8 +323,27 @@ pro_review () {
 
     pro_gate="$gate"
     echo "### 📋 [Review and approve the API changes](${review_url})" >> "$GITHUB_STEP_SUMMARY"
+    read_review_decisions "$review_url"
     pro_comment "$review_url" "$gate"
+    rm -f "$review_decisions"
     set_commit_status "$owner" "$repo" "$head_sha" "$gate" "$review_url"
+}
+
+# read_review_decisions reads the decision recorded for each change of the
+# review into $review_decisions, for the comment to show. A reviewer approves
+# or rejects on the review page; the decisions are kept per change, so every
+# run of the job shows the ones made so far.
+# $1: the review URL.
+read_review_decisions () {
+    review_decisions=$(mktemp)
+    review_token=$(printf '%s' "$1" | sed -n 's|.*/review/ep/\([^#?/]*\).*|\1|p')
+    api_url="${OASDIFF_API_URL:-https://api.oasdiff.com}"
+    code=$(curl -s -m 10 -o "$review_decisions" -w "%{http_code}" \
+        "${api_url%/}/tenants/${oasdiff_token}/encrypted-pr-review/${review_token}/changes" 2>/dev/null </dev/null) || code="000"
+    if [ "$code" != "200" ]; then
+        echo "::warning::oasdiff: couldn't read the review decisions (HTTP ${code}), so the comment lists the changes without their status."
+        : > "$review_decisions"
+    fi
 }
 
 # pro_comment posts or updates the Pro review comment (marker oasdiff-pro-review).
@@ -339,7 +378,7 @@ pro_comment () {
 
 ${status_line}
 
-$(review_comment_changes "${changes_json:-}")
+$(review_comment_changes "${changes_json:-}" "${review_decisions:-}")
 
 [Review and approve the changes](${review_url})
 

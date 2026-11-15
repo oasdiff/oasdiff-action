@@ -593,9 +593,11 @@ jobs:
     name: Test breaking Pro path posts the review comment and sets the gate
     # With an oasdiff-token the breaking action is the Pro action: it uploads
     # an authenticated review of the breaking changes, posts the review
-    # comment and sets the oasdiff commit status. Stubs oasdiff (one change in
-    # the json render; --open prints a /review/ep URL and a pending status)
-    # and curl (keeps the comment body).
+    # comment and sets the oasdiff commit status. The comment shows the
+    # decision recorded for each breaking change, and none for an info change.
+    # Stubs oasdiff (three changes in the json render; --open prints a
+    # /review/ep URL and a pending status) and curl (serves the decisions,
+    # keeps the comment body).
     steps:
       - uses: actions/checkout@v7
       - name: Stub oasdiff + curl (Pro success), run entrypoint
@@ -605,7 +607,7 @@ jobs:
 
           cat > /tmp/stub/oasdiff <<'STUB'
           #!/bin/sh
-          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths"}]'; exit 0; }; done
+          for a in "$@"; do [ "$a" = "json" ] && { printf '[{"id":"api-removed-without-deprecation","text":"API removed","level":3,"operation":"GET","path":"/pets","section":"paths","fingerprint":"aaaaaaaaaaaa"},{"id":"request-property-removed","text":"removed the request property","level":2,"operation":"POST","path":"/pets","section":"paths","fingerprint":"bbbbbbbbbbbb"},{"id":"endpoint-added","text":"endpoint added","level":1,"operation":"PUT","path":"/pets","section":"paths","fingerprint":"cccccccccccc"}]'; exit 0; }; done
           for a in "$@"; do
             if [ "$a" = "--open" ]; then
               echo "$1" > /tmp/run/open-command
@@ -620,11 +622,20 @@ jobs:
 
           cat > /tmp/stub/curl <<'STUB'
           #!/bin/sh
+          prev=""
           for a in "$@"; do
             case "$a" in *"%{http_code}"*) http_code=1 ;; esac
             case "$a" in *"/issues/"*) comment=1 ;; esac
             case "$a" in *"/statuses/"*) status=1 ;; esac
+            case "$a" in *"/encrypted-pr-review/test-token-uuid/changes") decisions=1 ;; esac
+            [ "$prev" = "-o" ] && out_file="$a"
+            prev="$a"
           done
+          if [ -n "${decisions:-}" ]; then
+            printf '{"changes":[{"fingerprint":"aaaaaaaaaaaa","status":"approved"},{"fingerprint":"bbbbbbbbbbbb","status":"pending"},{"fingerprint":"cccccccccccc","status":"pending"}]}' > "$out_file"
+            echo "200"
+            exit 0
+          fi
           if [ -n "${http_code:-}" ]; then
             if [ -n "${comment:-}" ]; then cat > /tmp/run/pro-comment.json
             elif [ -n "${status:-}" ]; then cat > /tmp/run/status.json
@@ -657,10 +668,12 @@ jobs:
           pro_body=$(jq -r '.body' < /tmp/run/pro-comment.json)
           echo "--- Pro comment body ---"; echo "$pro_body"
           for expected in \
-            '1 breaking change in this pull request' \
+            '3 breaking changes in this pull request' \
             'Review required' \
-            '| severity | change | endpoint |' \
-            'api-removed-without-deprecation' \
+            '| severity | change | endpoint | status |' \
+            '<code>GET /pets</code> | ✅ approved |' \
+            '<code>POST /pets</code> | ⏳ pending |' \
+            '<code>PUT /pets</code> |  |' \
             'Review and approve the changes'
           do
             case "$pro_body" in

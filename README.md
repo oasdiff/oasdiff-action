@@ -269,6 +269,8 @@ oasdiff Pro adds a sign-off step to the review, so a breaking change can't merge
 
 On every pull request, oasdiff posts the encrypted side-by-side review and gives each change **Approve / Reject** buttons. A commit status check named `oasdiff` blocks the merge until every breaking change is approved. Approvals are tied to the change fingerprint and carry forward across commits, with a record of who approved what and when.
 
+The comment lists the changes, and each breaking change shows its status: approved, rejected or pending. The action writes the comment, so the statuses are brought up to date on every run of the job: after a push, or when you re-run the job.
+
 [Start a free trial](https://www.oasdiff.com/start-trial) (no credit card) to get your token, then add it as an `OASDIFF_TOKEN` repository secret.
 
 ```yaml
