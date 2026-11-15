@@ -112,7 +112,8 @@ jobs:
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 | `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
-| `github-token` | `''` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. Pass `${{ github.token }}` and grant `permissions: pull-requests: write`. Optional; omit it to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | `${{ github.token }}` |
+| `github-token` | `${{ github.token }}` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to an empty string to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | a token, or `''` |
+| `config` | `''` | Path to an oasdiff config file, for a repository that does not keep `.oasdiff.yaml` at its root | a file path |
 
 ### Generate a changelog
 
@@ -145,6 +146,7 @@ jobs:
 | `revision` | — (required) | Path to the revised (new) OpenAPI spec | file path, URL, git ref |
 | `format` | `''` | Output format | `text`, `json`, `yaml`, `markdown`, `html` |
 | `level` | `''` | Minimum severity level to include in output | `INFO`, `WARN`, `ERR` |
+| `fail-on` | `''` | Fail with exit code 1 when a change is at or above this severity. Empty never fails | `ERR`, `WARN`, `INFO`, `MISSING-VERSION-BUMP` |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
 | `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
@@ -157,7 +159,8 @@ jobs:
 | `output-to-file` | `''` | Write output to this file path instead of stdout | file path |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Defaults to `false` to prevent SSRF on untrusted pull requests. Set `true` if your spec references external URLs or loads split files by file path | `true`, `false` |
 | `review` | `true` | When changes are found, upload the comparison to oasdiff.com and link to a direct side-by-side review. The two specs are encrypted in CI before upload and the decryption key stays in the URL fragment, so the server cannot read them. Set `false` to skip the upload, so no spec leaves CI | `true`, `false` |
-| `github-token` | `''` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. Pass `${{ github.token }}` and grant `permissions: pull-requests: write`. Optional; omit it to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | `${{ github.token }}` |
+| `github-token` | `${{ github.token }}` | Token used to post the changes as a pull-request comment, so reviewers see them on the PR instead of only in the job summary. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to an empty string to keep the link in the job summary only. Fork PRs (read-only token) fall back to the summary | a token, or `''` |
+| `config` | `''` | Path to an oasdiff config file, for a repository that does not keep `.oasdiff.yaml` at its root | a file path |
 
 ### Generate a diff report
 
@@ -294,7 +297,7 @@ When using git refs, you need to check out the repo and fetch the base branch:
 
 ## Pro: Approve and gate changes
 
-oasdiff Pro adds a sign-off step to the review, so a breaking change can't merge until your team approves it. It's the **same `changelog` action** as above, with your `oasdiff-token` added.
+oasdiff Pro adds a sign-off step to the review, so a breaking change can't merge until your team approves it. It's the **same action you already run**, `breaking` or `changelog`, with your `oasdiff-token` added.
 
 On every pull request, oasdiff posts the encrypted side-by-side review and gives each change **Approve / Reject** buttons. A commit status check named `oasdiff` blocks the merge until every breaking change is approved. Approvals are tied to the change fingerprint and carry forward across commits, with a record of who approved what and when.
 
@@ -314,17 +317,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: git fetch --depth=1 origin ${{ github.base_ref }}
-      - uses: oasdiff/oasdiff-action/changelog@v0
+      - uses: oasdiff/oasdiff-action/breaking@v0
         with:
           base: 'origin/${{ github.base_ref }}:openapi.yaml'
           revision: 'HEAD:openapi.yaml'
           oasdiff-token: ${{ secrets.OASDIFF_TOKEN }}
-          github-token: ${{ github.token }}
 ```
 
-The only difference from the free [changelog workflow](#generate-a-changelog) is the `oasdiff-token` secret and the `statuses: write` permission. Your specs are still encrypted in CI before upload, so the server can't read them.
+The only difference from the free [breaking workflow](#check-for-breaking-changes) is the `oasdiff-token` secret and the `statuses: write` permission. Your specs are still encrypted in CI before upload, so the server can't read them. With `breaking`, the changes to approve are the breaking ones; use `changelog` with the same token to put every change up for review.
 
-This is the `changelog` action [documented above](#generate-a-changelog); the one added input is:
+Both actions are documented above; the one added input is:
 
 | Input | Default | Description | Accepted values |
 |---|---|---|---|

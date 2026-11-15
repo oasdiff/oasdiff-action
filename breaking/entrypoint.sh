@@ -44,11 +44,12 @@ allow_external_refs=$(input allow-external-refs)
 review=$(input review)
 github_token=$(input github-token)
 oasdiff_token=$(input oasdiff-token)
+config=$(input config)
 readonly base revision fail_on include_checks include_path_params \
     deprecation_days_beta deprecation_days_stable exclude_elements \
     filter_extension composed flatten_allof err_ignore warn_ignore \
     output_to_file prefix_base prefix_revision case_insensitive_headers \
-    format template level allow_external_refs review github_token oasdiff_token
+    format template level allow_external_refs review github_token oasdiff_token config
 
 # What the PR comment calls the changes this command reports.
 case "$oasdiff_command" in
@@ -272,7 +273,7 @@ pro_review () {
     # Tolerate a non-zero exit; --open is additive. --review-meta carries the PR
     # context as an opaque bag the CLI forwards without interpreting.
     # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
-    pro_out=$(oasdiff changelog "$base" "$revision" $flags --open --template= \
+    pro_out=$(oasdiff "$oasdiff_command" "$base" "$revision" $flags --open --template= \
         --review-token "$oasdiff_token" \
         --review-meta owner="$owner" \
         --review-meta repo="$repo" \
@@ -328,12 +329,12 @@ pro_comment () {
         | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
 
     if [ "${change_count:-0}" -eq 1 ]; then
-        heading="1 API change in this pull request"
+        heading="1 ${change_noun} in this pull request"
     else
-        heading="${change_count:-0} API changes in this pull request"
+        heading="${change_count:-0} ${change_noun}s in this pull request"
     fi
     body="${marker}
-### 📋 ${heading}
+### ${comment_icon} ${heading}
 
 ${status_line}
 
@@ -412,7 +413,7 @@ pro_review_clear () {
         | jq -r --arg m "$marker" 'map(select(.body | contains($m))) | .[0].id // empty' 2>/dev/null) || existing_id=""
     [ -z "$existing_id" ] && return 0
     body="${marker}
-### ✅ No API changes in the latest revision."
+### ✅ ${no_changes_comment}"
     payload=$(jq -n --arg body "$body" '{body: $body}')
     printf '%s' "$payload" | curl -s -o /dev/null -X PATCH \
         -H "Authorization: token $github_token" \
@@ -460,6 +461,9 @@ run_breaking () {
     fi
     if [ -n "$warn_ignore" ]; then
         flags="$flags --warn-ignore $warn_ignore"
+    fi
+    if [ -n "$config" ]; then
+        flags="$flags --config $config"
     fi
     echo "flags: $flags"
 
@@ -540,7 +544,15 @@ run_breaking () {
         # stores a blob it cannot read. Set review: false to skip the upload
         # entirely, so no spec ever leaves CI; the breaking-change detection and
         # the inline annotations are unaffected either way.
-        if [ "$review" != "false" ]; then
+        if [ -n "$oasdiff_token" ]; then
+            # Pro: an authenticated review with an approval gate, posted instead
+            # of the free one (one review per pull request).
+            if [ "$composed" = "true" ]; then
+                echo "::notice::oasdiff: the side-by-side review isn't available in composed mode (-c). The breaking-change report above is unaffected."
+            else
+                pro_review
+            fi
+        elif [ "$review" != "false" ]; then
             if [ "$composed" = "true" ]; then
                 # Composed mode (-c) diffs globs of many files; the side-by-side
                 # review represents exactly two specs, so --open can't build it.
@@ -579,7 +591,9 @@ run_breaking () {
         write_output "No breaking changes"
         # Keep an existing review comment honest when a later push fixes the
         # breaking changes; never create one for an always-clean PR.
-        if [ "$review" != "false" ]; then
+        if [ -n "$oasdiff_token" ]; then
+            pro_review_clear
+        elif [ "$review" != "false" ]; then
             post_review_comment ""
         fi
     fi
@@ -590,7 +604,7 @@ run_breaking () {
     # review_url is a single-line output, written after the multiline `breaking`
     # block is closed so it doesn't get folded into that value. Empty when there
     # are no breaking changes (the notice/URL only fire then).
-    echo "review_url=${free_review_url:-}" >> "$GITHUB_OUTPUT"
+    echo "review_url=${free_review_url:-${review_url:-}}" >> "$GITHUB_OUTPUT"
 
     exit $exit_code
 }
@@ -645,6 +659,9 @@ run_changelog () {
     if [ -n "$template" ]; then
         fmt_flags="$fmt_flags --template $template"
     fi
+    if [ -n "$config" ]; then
+        flags="$flags --config $config"
+    fi
     echo "flags: $flags, presentation flags: $fmt_flags"
 
     # *** github action step output ***
@@ -659,8 +676,12 @@ run_changelog () {
 
     exit_code=0
     _err=$(mktemp)
+    fail_on_flag=""
+    if [ -n "$fail_on" ]; then
+        fail_on_flag="--fail-on $fail_on"
+    fi
     # shellcheck disable=SC2086 # the flags variables hold multiple arguments; splitting is intended
-    output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags 2>"$_err") || exit_code=$?
+    output=$(oasdiff changelog "$base" "$revision" $flags $fmt_flags $fail_on_flag 2>"$_err") || exit_code=$?
     # Only codes >=2 are real errors. Exit 1 is a fail-on result (the changelog
     # action has no fail-on input, but .oasdiff.yaml can set one); the changelog
     # action doesn't gate, so don't let it abort the run or suppress the review below.
@@ -767,7 +788,8 @@ run_changelog () {
     # are no changes (the notice/URL only fire then).
     echo "review_url=${free_review_url:-${review_url:-}}" >> "$GITHUB_OUTPUT"
 
-    # *** github action step output ***
+    # 1 when fail-on was reached, from the input or from .oasdiff.yaml.
+    exit "$exit_code"
 }
 
 case "$oasdiff_command" in
