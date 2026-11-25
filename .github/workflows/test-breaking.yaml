@@ -322,6 +322,34 @@ jobs:
             exit 1
           fi
 
+  oasdiff_breaking_exclude_elements_ignored:
+    runs-on: ubuntu-latest
+    name: Test exclude-elements is warned about, not applied
+    env:
+      OASDIFF_ACTION_TEST_EXPECTED_OUTPUT: "1 changes: 1 error, 0 warning, 0 info"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      # oasdiff breaking has no --exclude-elements flag, so forwarding the input
+      # would fail the run. The action only warns.
+      - name: Running breaking action with exclude-elements
+        id: test_exclude_elements
+        continue-on-error: true
+        uses: ./breaking
+        with:
+          base: 'specs/base.yaml'
+          revision: 'specs/revision-breaking.yaml'
+          exclude-elements: 'endpoints'
+      - name: Assert the run was unaffected
+        env:
+          ACTUAL_OUTPUT: ${{ steps.test_exclude_elements.outputs.breaking }}
+        run: |
+          output="$ACTUAL_OUTPUT"
+          if [ "$output" != "$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT" ]; then
+            echo "Expected output '$OASDIFF_ACTION_TEST_EXPECTED_OUTPUT' (exclude-elements must be ignored, not forwarded) but got '$output'" >&2
+            exit 1
+          fi
+
   oasdiff_breaking_unresolved_ref:
     runs-on: ubuntu-latest
     name: Test a failed comparison is not reported as clean

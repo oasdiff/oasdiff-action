@@ -478,7 +478,7 @@ run_breaking () {
         flags="$flags --deprecation-days-stable $deprecation_days_stable"
     fi
     if [ -n "$exclude_elements" ]; then
-        flags="$flags --exclude-elements $exclude_elements"
+        echo "::warning::oasdiff: 'exclude-elements' is ignored, breaking and changelog compare the specs in full. To turn a check off, add 'severity-levels: <file>' to .oasdiff.yaml, listing the check id with level 'none'."
     fi
     if [ -n "$filter_extension" ]; then
         flags="$flags --filter-extension $filter_extension"
@@ -659,7 +659,7 @@ run_changelog () {
         flags="$flags --include-path-params"
     fi
     if [ -n "$exclude_elements" ]; then
-        flags="$flags --exclude-elements $exclude_elements"
+        echo "::warning::oasdiff: 'exclude-elements' is ignored, breaking and changelog compare the specs in full. To turn a check off, add 'severity-levels: <file>' to .oasdiff.yaml, listing the check id with level 'none'."
     fi
     if [ -n "$filter_extension" ]; then
         flags="$flags --filter-extension $filter_extension"

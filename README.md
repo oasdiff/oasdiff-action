@@ -106,7 +106,7 @@ jobs:
 | `composed` | `false` | Run in [composed mode](https://github.com/oasdiff/oasdiff/blob/main/docs/COMPOSED.md), comparing globs of spec files |
 | `allow-external-refs` | `false` | Resolve external `$ref`s. Off by default to prevent SSRF on untrusted pull requests; set `true` if your spec references external URLs you trust |
 
-These inputs describe the run, with one exception: `fail-on` is policy, and is an input so that a workflow can block a merge without a second file. How oasdiff judges the API is configuration, and it goes in [`.oasdiff.yaml`](#configuring-with-oasdiffyaml): the severity that fails the job, ignore files, severity levels, `flatten-allof`, `exclude-elements`, `filter-extension`, `include-path-params`, the deprecation windows, and every other oasdiff flag. The inputs of those names that earlier versions documented still work.
+These inputs describe the run, with one exception: `fail-on` is policy, and is an input so that a workflow can block a merge without a second file. How oasdiff judges the API is configuration, and it goes in [`.oasdiff.yaml`](#configuring-with-oasdiffyaml): the severity that fails the job, ignore files, severity levels, `flatten-allof`, `filter-extension`, `include-path-params`, the deprecation windows, and every other oasdiff flag. The inputs of those names that earlier versions documented still work.
 
 ### Generate a changelog
 
@@ -149,7 +149,7 @@ jobs:
 | `fail-on-diff` | `false` | Fail with exit code 1 if any difference is found | `true`, `false` |
 | `format` | `yaml` | Output format | `yaml`, `json`, `text` |
 | `include-path-params` | `false` | Include path parameter names in endpoint matching | `true`, `false` |
-| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `endpoints`, `request`, `response` (comma-separated) |
+| `exclude-elements` | `''` | Exclude certain kinds of changes from the output | `description`, `endpoints`, `examples`, `extensions`, `summary`, `tags`, `title` (comma-separated) |
 | `filter-extension` | `''` | Exclude paths and operations with an OpenAPI Extension matching this expression | regex |
 | `composed` | `false` | Run in composed mode | `true`, `false` |
 | `flatten-allof` | `false` | Merge allOf subschemas into a single schema before diff | `true`, `false` |
@@ -187,7 +187,7 @@ For a non-blocking, report-only run, leave `fail-on` and set `continue-on-error:
 
 ## Configuring with `.oasdiff.yaml`
 
-Action inputs cover what a run needs: which specs to compare and the tokens. Everything about how oasdiff judges the API (the severity that fails the job, ignore files, severity levels, exclusions, deprecation windows) goes in `.oasdiff.yaml`, where every oasdiff flag works and the same file gives you the same answer when you run oasdiff locally.
+Action inputs cover what a run needs: which specs to compare and the tokens. Everything about how oasdiff judges the API (the severity that fails the job, ignore files, severity levels, deprecation windows) goes in `.oasdiff.yaml`, where every oasdiff flag works and the same file gives you the same answer when you run oasdiff locally.
 
 The `breaking`, `changelog` and `diff` actions automatically pick up a `.oasdiff.yaml` file from the root of your checked-out repository. This lets you keep CLI-flag-shaped configuration in source control instead of repeating the same `with:` block in every workflow file.
 
@@ -196,10 +196,6 @@ Drop a `.oasdiff.yaml` next to your spec:
 ```yaml
 # .oasdiff.yaml
 fail-on: ERR
-exclude-elements:
-  - description
-  - title
-  - summary
 err-ignore: ./oasdiff-err-ignore.txt
 severity-levels: ./oasdiff-levels.txt
 ```
@@ -211,6 +207,8 @@ severity-levels: ./oasdiff-levels.txt
 response-non-success-status-removed    err
 api-tag-removed                        none
 ```
+
+`exclude-elements` and `exclude-extensions` apply to the `diff` action only. The `breaking`, `changelog` and `pr-comment` actions compare the specs in full, so that excluding part of a spec cannot remove a change from the report. To turn a check off there, set its level to `none`.
 
 The actions read this file from the runner's `$GITHUB_WORKSPACE` (which `actions/checkout` populates), so no extra steps are needed.
 
