@@ -12,7 +12,7 @@ inputs:
     required: false
     default: 'false'
   exclude-elements:
-    description: 'Exclude certain kinds of changes'
+    description: 'Ignored: the checks compare the specs in full. To turn a check off, set its level to none in a severity levels file'
     required: false
     default: ''
   filter-extension:
