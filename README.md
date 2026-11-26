@@ -275,6 +275,7 @@ on:
   pull_request:
     branches: [ "main" ]
 permissions:
+  contents: read
   pull-requests: write   # post the review comment
   statuses: write        # set the merge-gate commit status
 jobs:
