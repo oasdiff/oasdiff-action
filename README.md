@@ -99,7 +99,7 @@ jobs:
 | `revision` | required | The revised (new) OpenAPI spec, in the same forms |
 | `fail-on` | `''` | Fail the job when a change is at or above this severity: `ERR` or `WARN`, or `MISSING-VERSION-BUMP` to fail only when breaking changes come without a major version increase in `info.version`. Empty never fails. This is policy rather than a fact about the run: once you have a `.oasdiff.yaml`, set it there |
 | `oasdiff-token` | `''` | Your oasdiff Pro token. See [Pro: Approve and gate changes](#pro-approve-and-gate-changes) |
-| `github-token` | `${{ github.token }}` | Token used to post the comment. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Set it to `''` to keep the review link in the job summary only |
+| `github-token` | `${{ github.token }}` | Token used to post the comment. The default is the job's own token, so you only need to grant `permissions: pull-requests: write`. Without that permission the step fails with an error saying so. Set it to `''` to keep the review link in the job summary only |
 | `review` | `true` | Upload the encrypted comparison and link to the side-by-side review. Set `false` so that no spec leaves CI; annotations and the job result are unaffected |
 | `config` | `''` | Path to an oasdiff config file, when `.oasdiff.yaml` is not at the repository root |
 | `output-to-file` | `''` | Also write the report to this file |

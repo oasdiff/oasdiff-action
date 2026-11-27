@@ -23,6 +23,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
           output-to-file: 'breaking.txt'
+          github-token: ''
       - name: Test breaking changes action output
         env:
           ACTUAL_OUTPUT: ${{ steps.test_breaking_changes.outputs.breaking }}
@@ -59,6 +60,7 @@ jobs:
           revision: 'specs/revision-breaking-warn.yaml'
           output-to-file: 'breaking.txt'
           fail-on: 'ERR'
+          github-token: ''
       - name: Test breaking changes action output
         env:
           ACTUAL_OUTPUT: ${{ steps.test_breaking_changes.outputs.breaking }}
@@ -93,6 +95,7 @@ jobs:
           with:
             base: 'specs/petstore-base.yaml'
             revision: 'specs/petstore-revision.yaml'
+            github-token: ''
         - name: Test breaking changes action output
           env:
             ACTUAL_OUTPUT: ${{ steps.test_breaking_changes_matching_delimiter_not_found.outputs.breaking }}
@@ -117,6 +120,7 @@ jobs:
             base: 'specs/glob/base/*.yaml'
             revision: 'specs/glob/revision/*.yaml'
             composed: true
+            github-token: ''
         - name: Test breaking action output
           env:
             ACTUAL_OUTPUT: ${{ steps.test_breaking_composed.outputs.breaking }}
@@ -146,6 +150,7 @@ jobs:
           revision: specs/base-deprecation.yaml
           deprecation-days-beta: 14
           deprecation-days-stable: 21
+          github-token: ''
   oasdiff_breaking_flatten_allof:
     runs-on: ubuntu-latest
     name: Test breaking action with flatten-allof option
@@ -161,6 +166,7 @@ jobs:
           base: 'specs/base-allof.yaml'
           revision: 'specs/revision-allof.yaml'
           flatten-allof: true
+          github-token: ''
       - name: Test breaking action output
         env:
           ACTUAL_OUTPUT: ${{ steps.test_breaking_flatten_allof.outputs.breaking }}
@@ -183,6 +189,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
           err-ignore: 'specs/err-ignore.txt'
+          github-token: ''
       - name: Test breaking changes are suppressed
         env:
           ACTUAL_OUTPUT: ${{ steps.test_breaking_err_ignore.outputs.breaking }}
@@ -218,6 +225,7 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
+          github-token: ''
       - name: Assert action failed (.oasdiff.yaml fail-on triggered) and report rendered
         env:
           ACTUAL_OUTPUT: ${{ steps.test_yaml_fail_on.outputs.breaking }}
@@ -252,6 +260,7 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
+          github-token: ''
       - name: Assert breaking changes were suppressed by .oasdiff.yaml
         env:
           ACTUAL_OUTPUT: ${{ steps.test_yaml_err_ignore.outputs.breaking }}
@@ -283,6 +292,7 @@ jobs:
         with:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
+          github-token: ''
       - name: Assert the finding was downgraded by .oasdiff.yaml
         env:
           ACTUAL_OUTPUT: ${{ steps.test_yaml_severity_levels.outputs.breaking }}
@@ -312,6 +322,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
           include-checks: 'not-a-real-check'
+          github-token: ''
       - name: Assert the run was unaffected
         env:
           ACTUAL_OUTPUT: ${{ steps.test_include_checks.outputs.breaking }}
@@ -340,6 +351,7 @@ jobs:
           base: 'specs/base.yaml'
           revision: 'specs/revision-breaking.yaml'
           exclude-elements: 'endpoints'
+          github-token: ''
       - name: Assert the run was unaffected
         env:
           ACTUAL_OUTPUT: ${{ steps.test_exclude_elements.outputs.breaking }}
@@ -489,11 +501,12 @@ jobs:
   oasdiff_breaking_comment_failure_names_the_fix:
     runs-on: ubuntu-latest
     name: Test a blocked PR comment says what to change
-    # A comment that cannot post is reported two different ways, because only
-    # one of them is actionable: a job without pull-requests:write gets a
-    # warning naming the permission, while a pull request from a fork gets a
+    # A comment that cannot post is reported three ways, because only one of
+    # them is the job's configuration: a job without pull-requests:write fails
+    # with an error naming the permission, a pull request from a fork gets a
     # plain line, since GitHub makes the token read-only there whatever the
-    # job does. Both cases are also reported separately in the delivery mode.
+    # job does, and any other refusal (here a rate limit) only warns. Each case
+    # is also reported separately in the delivery event.
     steps:
       - uses: actions/checkout@v7
       - name: Stub oasdiff + a rejecting curl, run with and without a fork event
@@ -519,12 +532,13 @@ jobs:
           STUB
           chmod +x /tmp/stub/oasdiff
 
-          # Rejects the comment with 403, the shape GitHub returns both for a
-          # missing permission and for a fork's read-only token.
+          # Rejects the comment with 403 and the message in /tmp/run/message:
+          # GitHub's message for a missing permission (also what a fork's
+          # read-only token gets), or a rate-limit message.
           cat > /tmp/stub/curl <<'STUB'
           #!/bin/sh
           for a in "$@"; do
-            case "$prev" in -X) method=$a ;; esac
+            case "$prev" in -X) method=$a ;; -o) out=$a ;; esac
             prev=$a
           done
           case " $* " in
@@ -532,6 +546,7 @@ jobs:
           esac
           if [ "${method:-GET}" = GET ]; then echo '[]'; exit 0; fi
           cat > /dev/null
+          printf '{"message":"%s"}' "$(cat /tmp/run/message)" > "${out:-/dev/null}"
           printf '403'
           STUB
           chmod +x /tmp/stub/curl
@@ -551,21 +566,45 @@ jobs:
               'INPUT_GITHUB-TOKEN=fake-token' bash ./breaking/entrypoint.sh
           }
 
-          echo "=== same-repo pull request: expect a warning naming the permission"
+          echo "=== same-repo pull request, missing permission: expect the step to fail naming the permission"
+          echo 'Resource not accessible by integration' > /tmp/run/message
           printf '{"pull_request":{"head":{"repo":{"full_name":"acme/api"}}}}' > /tmp/run/event.json
-          out=$(run_entrypoint 2>&1)
+          rc=0; out=$(run_entrypoint 2>&1) || rc=$?
           echo "$out" | grep -v '^flags:\|^running oasdiff'
+          if [ "$rc" -ne 1 ]; then
+            echo "FAIL: expected the step to fail with exit 1, got $rc" >&2
+            exit 1
+          fi
           case "$out" in
-            *"::warning::oasdiff: couldn't post the review link"*"pull-requests: write"*) ;;
-            *) echo "FAIL: no warning naming the permission" >&2; exit 1 ;;
+            *"::error title=oasdiff couldn't post the PR comment::"*"pull-requests: write"*"github-token"*) ;;
+            *) echo "FAIL: no error naming the permission and the opt-out" >&2; exit 1 ;;
           esac
-          mode=$(jq -r '.props.mode' < /tmp/run/telemetry.json)
-          if [ "$mode" != "comment_failed" ]; then
-            echo "FAIL: expected delivery mode 'comment_failed', got '$mode'" >&2
+          props=$(jq -c '.props | {mode, reason}' < /tmp/run/telemetry.json)
+          if [ "$props" != '{"mode":"comment_failed","reason":"http_403_permission"}' ]; then
+            echo "FAIL: unexpected delivery event: $props" >&2
+            exit 1
+          fi
+
+          echo "=== same-repo pull request, rate limited: expect a warning and a passing step"
+          echo 'You have exceeded a secondary rate limit' > /tmp/run/message
+          rc=0; out=$(run_entrypoint 2>&1) || rc=$?
+          echo "$out" | grep -v '^flags:\|^running oasdiff'
+          if [ "$rc" -ne 0 ]; then
+            echo "FAIL: a rate-limited comment must not fail the step, got exit $rc" >&2
+            exit 1
+          fi
+          case "$out" in
+            *"::warning::oasdiff: couldn't post the review link as a PR comment (HTTP 403)"*) ;;
+            *) echo "FAIL: no warning for the rate-limited comment" >&2; exit 1 ;;
+          esac
+          props=$(jq -c '.props | {mode, reason}' < /tmp/run/telemetry.json)
+          if [ "$props" != '{"mode":"comment_failed","reason":"http_403"}' ]; then
+            echo "FAIL: unexpected delivery event: $props" >&2
             exit 1
           fi
 
           echo "=== fork pull request: expect a plain line and no warning"
+          echo 'Resource not accessible by integration' > /tmp/run/message
           printf '{"pull_request":{"head":{"repo":{"full_name":"contrib/api-fork"}}}}' > /tmp/run/event.json
           out=$(run_entrypoint 2>&1)
           echo "$out" | grep -v '^flags:\|^running oasdiff'

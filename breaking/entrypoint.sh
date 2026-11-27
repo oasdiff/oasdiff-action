@@ -157,13 +157,17 @@ review_comment_changes () {
 # or failed to post. This tells the maintainers how often users end up on the
 # summary fallback, which is what drives fixes to the defaults. It carries no
 # repo, organization, or user identity; action_ref is the action's own
-# version tag. Best-effort with a 5 second cap, a failure never affects the
-# run, and it is skipped when OASDIFF_INTERNAL=1 (the marker the CLI also
-# uses for internal test runs).
+# version tag, and reason is GitHub's HTTP status when the comment failed.
+# Best-effort with a 5 second cap, a failure never affects the run, and it is
+# skipped when OASDIFF_INTERNAL=1 (the marker the CLI also uses for internal
+# test runs).
 report_review_delivery () {
     delivery_mode="$1"
+    delivery_reason="${2:-}"
     [ "${OASDIFF_INTERNAL:-}" = "1" ] && return 0
-    printf '{"event":"review_delivery","props":{"mode":"%s","platform":"github-action","action_ref":"%s"}}'         "$delivery_mode" "${GITHUB_ACTION_REF:-unknown}"         | curl -s -m 5 -o /dev/null -X POST -H "Content-Type: application/json"             "https://www.oasdiff.com/api/telemetry" --data-binary @- 2>/dev/null || true
+    jq -nc --arg mode "$delivery_mode" --arg ref "${GITHUB_ACTION_REF:-unknown}" --arg reason "$delivery_reason" \
+        '{event: "review_delivery", props: ({mode: $mode, platform: "github-action", action_ref: $ref} + (if $reason == "" then {} else {reason: $reason} end))}' \
+        | curl -s -m 5 -o /dev/null -X POST -H "Content-Type: application/json"             "https://www.oasdiff.com/api/telemetry" --data-binary @- 2>/dev/null || true
 }
 
 post_review_comment () {
@@ -226,10 +230,17 @@ $(review_comment_changes "${changes_json:-}" "$review_url")
         method="POST"
     fi
 
-    code=$(printf '%s' "$payload" | curl -s -o /dev/null -w "%{http_code}" -X "$method" \
+    response=$(mktemp)
+    code=$(printf '%s' "$payload" | curl -s -o "$response" -w "%{http_code}" -X "$method" \
         -H "Authorization: token $github_token" \
         -H "Accept: application/vnd.github+json" \
         "$endpoint" --data-binary @- 2>/dev/null) || code="000"
+    # GitHub answers a token without pull-requests: write with this message. A
+    # 403 for a secondary rate limit says something else, and is not the
+    # job's configuration.
+    missing_permission=""
+    grep -q "Resource not accessible by integration" "$response" 2>/dev/null && missing_permission=1
+    rm -f "$response"
 
     if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
         [ -n "$review_url" ] && report_review_delivery "comment"
@@ -240,8 +251,16 @@ $(review_comment_changes "${changes_json:-}" "$review_url")
         [ -n "$review_url" ] && report_review_delivery "comment_fork"
         echo "oasdiff: this pull request comes from a fork, where GitHub makes the token read-only, so the review link is in the job summary instead of a comment."
     else
-        [ -n "$review_url" ] && report_review_delivery "comment_failed"
-        echo "::warning::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). Add 'permissions: pull-requests: write' to the job that runs this action. The link is in the job summary meanwhile."
+        [ -n "$review_url" ] && report_review_delivery "comment_failed" "http_${code}${missing_permission:+_permission}"
+        if [ -n "$missing_permission" ] && [ -n "$review_url" ]; then
+            # A warning on a passing job is never read, so the step fails (in
+            # finish) until the job grants the permission or opts out of the
+            # comment.
+            review_comment_blocked=1
+            echo "::error title=oasdiff couldn't post the PR comment::GitHub refused the comment (HTTP 403) because the job's token can't write to pull requests. Add 'permissions: pull-requests: write' to the job that runs this action, or set 'github-token: \"\"' on the action to keep the review link in the job summary only."
+        else
+            echo "::warning::oasdiff: couldn't post the review link as a PR comment (HTTP ${code}). The link is in the job summary."
+        fi
     fi
 }
 
@@ -451,6 +470,9 @@ finish () {
             echo "oasdiff: every breaking change in this pull request is approved, so fail-on does not fail the job."
             code=0
         fi
+    fi
+    if [ -n "${review_comment_blocked:-}" ]; then
+        code=1
     fi
     exit "$code"
 }
