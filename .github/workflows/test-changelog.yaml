@@ -23,6 +23,7 @@ jobs:
           base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
           output-to-file: "changelog.txt"
+          github-token: ''
       - name: Test changelog action output
         run: |
           output=$(echo "${{steps.test_changelog.outputs.changelog}}" | head -n 1)
@@ -54,6 +55,7 @@ jobs:
             base: 'specs/glob/base/*.yaml'
             revision: 'specs/glob/revision/*.yaml'
             composed: true
+            github-token: ''
         - name: Test changelog action output
           env:
             ACTUAL_OUTPUT: ${{ steps.test_changelog_composed.outputs.changelog }}
@@ -80,6 +82,7 @@ jobs:
         with:
           base: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test1.yaml
           revision: https://raw.githubusercontent.com/oasdiff/oasdiff/main/data/openapi-test3.yaml
+          github-token: ''
       - name: Assert level filter from .oasdiff.yaml suppressed warning/info findings
         run: |
           # Without the YAML, the same specs produce "26 changes: 4 error, 4 warning, 18 info".
